@@ -1,0 +1,452 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-display);
+  --font-mono: var(--font-mono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  /* ── PRINCE // WORLD custom tokens ─────────────────────────── */
+  --color-wx-cyan: var(--wx-cyan);
+  --color-wx-violet: var(--wx-violet);
+  --color-wx-green: var(--wx-green);
+  --color-wx-amber: var(--wx-amber);
+  --color-wx-red: var(--wx-red);
+  --color-wx-dim: var(--wx-dim);
+}
+
+:root {
+  --radius: 0.25rem;
+
+  /* world palette — graphite void, restrained cyan */
+  --background: #04040a;
+  --foreground: #dfe7f2;
+  --card: #0a0e16;
+  --card-foreground: #dfe7f2;
+  --popover: #0b0f19;
+  --popover-foreground: #dfe7f2;
+  --primary: #55e6ff;
+  --primary-foreground: #04040a;
+  --secondary: #121826;
+  --secondary-foreground: #c4d1e2;
+  --muted: #10141f;
+  --muted-foreground: #96a4c0;
+  --accent: #55e6ff;
+  --accent-foreground: #04040a;
+  --destructive: #ff5470;
+  --destructive-foreground: #04040a;
+  --border: rgba(148, 180, 220, 0.14);
+  --input: rgba(148, 180, 220, 0.18);
+  --ring: rgba(85, 230, 255, 0.55);
+  --chart-1: #55e6ff;
+  --chart-2: #8b7bff;
+  --chart-3: #3ddc97;
+  --chart-4: #ffc857;
+  --chart-5: #ff5470;
+  --sidebar: #0a0e16;
+  --sidebar-foreground: #dfe7f2;
+  --sidebar-primary: #55e6ff;
+  --sidebar-primary-foreground: #04040a;
+  --sidebar-accent: #121826;
+  --sidebar-accent-foreground: #dfe7f2;
+  --sidebar-border: rgba(148, 180, 220, 0.14);
+  --sidebar-ring: rgba(85, 230, 255, 0.55);
+
+  --wx-cyan: #55e6ff;
+  --wx-violet: #9d8fff;
+  --wx-green: #3ddc97;
+  --wx-amber: #ffc857;
+  --wx-red: #ff5470;
+  --wx-dim: #96a4c0;
+}
+
+.dark {
+  --background: #04040a;
+  --foreground: #dfe7f2;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    color-scheme: dark;
+    scrollbar-color: rgba(85, 230, 255, 0.25) transparent;
+  }
+  body {
+    @apply bg-background text-foreground;
+    overflow: hidden;
+    font-feature-settings: "ss01" on, "cv05" on;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection {
+    background: rgba(85, 230, 255, 0.22);
+    color: #eaf6ff;
+  }
+}
+
+/* ══════════════════ WORLD UTILITIES ══════════════════ */
+
+@layer utilities {
+  /* thin sci-fi scrollbar */
+  .wx-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(85, 230, 255, 0.28) transparent;
+  }
+  .wx-scroll::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  .wx-scroll::-webkit-scrollbar-thumb {
+    background: rgba(85, 230, 255, 0.28);
+    border-radius: 0;
+  }
+  .wx-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* translucent glass surface */
+  .glass {
+    background: linear-gradient(
+      160deg,
+      rgba(16, 22, 36, 0.82),
+      rgba(8, 11, 19, 0.88)
+    );
+    backdrop-filter: blur(14px) saturate(1.2);
+    -webkit-backdrop-filter: blur(14px) saturate(1.2);
+    border: 1px solid rgba(148, 180, 220, 0.13);
+  }
+  .glass-deep {
+    background: linear-gradient(
+      170deg,
+      rgba(10, 13, 22, 0.94),
+      rgba(5, 7, 12, 0.97)
+    );
+    backdrop-filter: blur(20px) saturate(1.15);
+    -webkit-backdrop-filter: blur(20px) saturate(1.15);
+    border: 1px solid rgba(148, 180, 220, 0.1);
+  }
+
+  /* scanlines overlay */
+  .scanlines::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      to bottom,
+      transparent 0px,
+      transparent 2px,
+      rgba(180, 220, 255, 0.016) 3px,
+      transparent 4px
+    );
+    mix-blend-mode: screen;
+  }
+
+  /* film grain (animated via keyframes) */
+  .grain::before {
+    content: "";
+    position: absolute;
+    inset: -100%;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 250 250' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.72' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    opacity: 0.05;
+    animation: grain-shift 0.9s steps(4) infinite;
+  }
+
+  .vignette::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(
+      ellipse 120% 105% at 50% 42%,
+      transparent 52%,
+      rgba(2, 3, 8, 0.55) 100%
+    );
+  }
+
+  /* angular corner-cut panel */
+  .clip-panel {
+    clip-path: polygon(
+      14px 0,
+      100% 0,
+      100% calc(100% - 14px),
+      calc(100% - 14px) 100%,
+      0 100%,
+      0 14px
+    );
+  }
+  .clip-tag {
+    clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+  }
+  .clip-btn {
+    clip-path: polygon(
+      10px 0,
+      100% 0,
+      100% calc(100% - 10px),
+      calc(100% - 10px) 100%,
+      0 100%,
+      0 10px
+    );
+  }
+
+  /* glowing text */
+  .text-glow-cyan {
+    text-shadow:
+      0 0 12px rgba(85, 230, 255, 0.45),
+      0 0 42px rgba(85, 230, 255, 0.18);
+  }
+  .text-glow-soft {
+    text-shadow: 0 0 18px rgba(120, 200, 255, 0.25);
+  }
+
+  /* hairline gradient border on top edge of panels */
+  .edge-lit {
+    position: relative;
+  }
+  .edge-lit::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 8%;
+    right: 8%;
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(85, 230, 255, 0.5),
+      transparent
+    );
+    pointer-events: none;
+  }
+
+  .tracking-wider-xs {
+    letter-spacing: 0.32em;
+  }
+}
+
+/* ══════════════════ KEYFRAMES ══════════════════ */
+
+@keyframes grain-shift {
+  0% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(-2%, 3%);
+  }
+  50% {
+    transform: translate(3%, -2%);
+  }
+  75% {
+    transform: translate(-3%, -3%);
+  }
+  100% {
+    transform: translate(2%, 2%);
+  }
+}
+
+@keyframes wx-flash {
+  0%,
+  100% {
+    border-color: rgba(85, 230, 255, 0.45);
+    color: var(--wx-cyan);
+    box-shadow: 0 0 0 0 rgba(85, 230, 255, 0);
+    text-shadow: 0 0 0 rgba(85, 230, 255, 0);
+  }
+  50% {
+    border-color: rgba(85, 230, 255, 1);
+    color: #ffffff;
+    box-shadow:
+      0 0 26px rgba(85, 230, 255, 0.5),
+      inset 0 0 16px rgba(85, 230, 255, 0.2);
+    text-shadow: 0 0 14px rgba(85, 230, 255, 0.8);
+  }
+}
+
+/* flashing CTA — stops the moment it is hovered/focused */
+.wx-flash {
+  animation: wx-flash 1.5s ease-in-out infinite;
+}
+.wx-flash:hover,
+.wx-flash:focus-visible {
+  animation: none;
+  border-color: var(--wx-cyan);
+  color: #ffffff;
+  background: rgba(85, 230, 255, 0.12);
+  box-shadow:
+    0 0 30px rgba(85, 230, 255, 0.4),
+    inset 0 0 18px rgba(85, 230, 255, 0.22);
+}
+
+@keyframes wx-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.35);
+  }
+}
+
+@keyframes wx-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgba(85, 230, 255, 0.35);
+  }
+  70% {
+    box-shadow: 0 0 0 12px rgba(85, 230, 255, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(85, 230, 255, 0);
+  }
+}
+
+@keyframes wx-scan-y {
+  0% {
+    top: -8%;
+  }
+  100% {
+    top: 108%;
+  }
+}
+
+@keyframes wx-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes wx-blink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes wx-glitch-x {
+  0%,
+  100% {
+    transform: translate(0);
+  }
+  20% {
+    transform: translate(-2px, 1px);
+  }
+  40% {
+    transform: translate(2px, -1px);
+  }
+  60% {
+    transform: translate(-1px, -1px);
+  }
+  80% {
+    transform: translate(1px, 1px);
+  }
+}
+
+@keyframes wx-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes wx-sweep {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(320%);
+  }
+}
+
+@keyframes wx-spin-slow {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* utility animation classes */
+.wx-animate-pulse {
+  animation: wx-pulse 2.6s ease-in-out infinite;
+}
+.wx-animate-ring {
+  animation: wx-ring 2.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+.wx-animate-float {
+  animation: wx-float 5s ease-in-out infinite;
+}
+.wx-animate-blink {
+  animation: wx-blink 1.1s steps(1) infinite;
+}
+.wx-animate-fade-in {
+  animation: wx-fade-in 0.5s ease-out both;
+}
+.wx-animate-spin-slow {
+  animation: wx-spin-slow 14s linear infinite;
+}
+.wx-animate-glitch {
+  animation: wx-glitch-x 0.3s steps(2) infinite;
+}
