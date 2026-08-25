@@ -32,9 +32,6 @@ export const metadata: Metadata = {
     "interactive experience",
   ],
   authors: [{ name: "Prince", url: "https://github.com/PrinceAscending" }],
-  icons: {
-    icon: "/icon.svg",
-  },
   openGraph: {
     title: "PRINCE // WORLD",
     description: "An explorable real-time digital universe.",

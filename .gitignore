@@ -41,3 +41,7 @@ db/*.db
 
 # claude code local state
 .claude/
+
+# agent instruction files — local only, README is the sole repo doc
+AGENTS.md
+CLAUDE.md
