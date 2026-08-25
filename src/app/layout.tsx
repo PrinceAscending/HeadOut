@@ -15,7 +15,7 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://prince-world.vercel.app"),
+  metadataBase: new URL("https://princeheadout.vercel.app"),
   title: {
     default: "PRINCE // WORLD",
     template: "%s — PRINCE // WORLD",
@@ -38,7 +38,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "PRINCE // WORLD",
     description: "An explorable real-time digital universe.",
-    url: "https://prince-world.vercel.app",
+    url: "https://princeheadout.vercel.app",
     siteName: "PRINCE // WORLD",
     type: "website",
     images: [

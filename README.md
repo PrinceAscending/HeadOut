@@ -3,6 +3,8 @@
 > An explorable real-time digital universe.
 > **The website is not the profile — the website is the experience of discovering Prince.**
 
+**Live at [princeheadout.vercel.app](https://princeheadout.vercel.app)**
+
 Enter through a cinematic boot sequence, orbit a living WebGL world map, and discover ten regions driven by real, live signals: Discord presence, GitHub repositories, Chess.com ratings, Spotify listening. Everything else — the terminal, the lab, the void — is hidden until you find it.
 
 ## The Stack
@@ -26,6 +28,15 @@ Enter through a cinematic boot sequence, orbit a living WebGL world map, and dis
 | Spotify artist enrichment | Spotify API (env-gated) | optional |
 
 Adapter architecture lives in `src/lib/integrations/` — Riot, Steam, YouTube, Reddit, X, Telegram adapters are scaffolded with clean fallback states and activate when credentials are configured. **No fake stats. Ever.**
+
+## AI Oracle (Groq)
+
+The **NEURAL LINK** inside Central Core (plus terminal `ask <question>` and `narrate`) is powered by Groq — server-side only via `GROQ_API_KEY`:
+
+- Key lives only in env vars (`.env.local` locally, Vercel dashboard in production) — never shipped to the browser
+- Hardened: per-IP rate limit (6/min, 40/day), message caps, length caps, prompt-injection-resistant system prompt
+- The oracle only knows Prince's PUBLIC identity and live world state — it refuses to fabricate stats or reveal private info
+- No key / invalid key → the oracle shows a designed dormant state; the rest of the world is unaffected
 
 ## The Game Layer
 
@@ -56,15 +67,10 @@ Optional integrations activate when you copy `.env.example` → `.env.local` and
 
 Everything displayed is public data. No tokens or secrets reach the browser. Visitor progress stays in the visitor's browser. See the PRIVACY / DATA section inside the world's ARCHIVE region.
 
+## License
+
+Released under the [MIT License](./LICENSE).
+
 ---
 
 `ENTER · EXPLORE · CONNECT · DISCOVER · UNLOCK · MEET PRINCE`
-
-## AI Oracle (Groq)
-
-The **NEURAL LINK** inside Central Core (plus terminal `ask <question>` and `narrate`) is powered by Groq — server-side only via `GROQ_API_KEY`:
-
-- Key lives only in env vars (`.env.local` locally, Vercel dashboard in production) — never shipped to the browser
-- Hardened: per-IP rate limit (6/min, 40/day), message caps, length caps, prompt-injection-resistant system prompt
-- The oracle only knows Prince's PUBLIC identity and live world state — it refuses to fabricate stats or reveal private info
-- No key / invalid key → the oracle shows a designed dormant state; the rest of the world is unaffected

@@ -16,7 +16,6 @@ import { playSound } from "@/lib/audio/sound";
 export function CommandPalette() {
   const open = useWorld((s) => s.paletteOpen);
   const setOpen = useWorld((s) => s.setPaletteOpen);
-  const setTerminalOpen = useWorld((s) => s.setTerminalOpen);
   const unknownRevealed = useGame((s) => s.unknownRevealed);
 
   useEffect(() => {
@@ -90,37 +89,6 @@ export function CommandPalette() {
                       {r.name}
                     </Command.Item>
                   ))}
-                </Command.Group>
-
-                <Command.Group
-                  heading="SYSTEM"
-                  className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:font-mono [&_[cmdk-group-heading]]:text-[9.5px] [&_[cmdk-group-heading]]:tracking-[0.3em] [&_[cmdk-group-heading]]:text-wx-dim"
-                >
-                  <Command.Item
-                    value="terminal console"
-                    onSelect={() => go(() => {
-                      useWorld.getState().setTerminalOpen(true);
-                    })}
-                    className="flex items-center gap-3 px-3 py-3 font-mono text-[11.5px] tracking-[0.14em] cursor-pointer data-[selected=true]:bg-white/8 data-[selected=true]:text-white text-foreground/70"
-                  >
-                    <span className="text-wx-dim">TM</span>
-                    TERMINAL
-                  </Command.Item>
-                  <Command.Item
-                    value="sound audio mute unmute"
-                    onSelect={() => go(() => {
-                      /* handled by HUD button normally; palette routes to world state hint */
-                      useGame.getState().pushToast({
-                        kind: "system",
-                        title: "AUDIO",
-                        body: "USE THE SPEAKER TOGGLE — TOP RIGHT",
-                      });
-                    })}
-                    className="flex items-center gap-3 px-3 py-3 font-mono text-[11.5px] tracking-[0.14em] cursor-pointer data-[selected=true]:bg-white/8 data-[selected=true]:text-white text-foreground/70"
-                  >
-                    <span className="text-wx-dim">AU</span>
-                    SOUND
-                  </Command.Item>
                 </Command.Group>
               </Command.List>
             </Command>

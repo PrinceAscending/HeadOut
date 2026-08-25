@@ -3,6 +3,10 @@ node_modules
 .pnp
 .pnp.*
 
+# bun.lock is the single lockfile (vercel.json pins `bun install`)
+package-lock.json
+yarn.lock
+
 # testing
 coverage
 

@@ -87,6 +87,9 @@ export function WorldExperience() {
   const activePanel = useWorld((s) => s.activePanel);
 
   /* ── boot → enter ─────────────────────────────────────── */
+  /* one-shot post-hydration probes of browser-only state (audio pref,
+     WebGL support) — deliberately corrected after mount to avoid SSR mismatch */
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     initSoundFromStorage();
     setSoundOn(isSoundEnabled());
@@ -99,6 +102,7 @@ export function WorldExperience() {
       setWebglOk(false);
     }
   }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleEnter = useCallback(() => {
     setEntered(true);
