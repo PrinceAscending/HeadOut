@@ -1,6 +1,7 @@
 {
-  "name": "nextjs_tailwind_shadcn_ts",
-  "version": "0.2.1",
+  "name": "prince-world",
+  "version": "1.0.0",
+  "description": "An explorable real-time digital universe.",
   "private": true,
   "scripts": {
     "dev": "next dev",
