@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { REGION_MAP } from "@/lib/config/regions";
 import { useGame } from "@/lib/game/store";
@@ -31,14 +31,25 @@ export function RegionPanelShell({
   const isMobile = useIsMobile();
   const def = REGION_MAP[regionId];
   const open = activePanel === regionId;
+  const panelRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     if (open) {
       visitRegion(regionId);
       playSound("open");
     }
-     
+
   }, [open, regionId]);
+
+  useEffect(() => {
+    if (!open) return;
+    /* move focus into the dialog; restore it when the dialog closes */
+    const prevFocus = document.activeElement as HTMLElement | null;
+    panelRef.current?.focus();
+    return () => {
+      prevFocus?.focus();
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -46,6 +57,24 @@ export function RegionPanelShell({
       if (e.key === "Escape") {
         setActivePanel(null);
         playSound("close");
+        return;
+      }
+      /* keep Tab cycling inside the modal panel */
+      if (e.key === "Tab" && panelRef.current) {
+        const focusables = panelRef.current.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        );
+        if (!focusables.length) return;
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        const outside = !panelRef.current.contains(document.activeElement);
+        const atEdge = e.shiftKey
+          ? document.activeElement === first
+          : document.activeElement === last;
+        if (outside || atEdge) {
+          e.preventDefault();
+          (e.shiftKey ? last : first).focus();
+        }
       }
     };
     window.addEventListener("keydown", onKey);
@@ -71,11 +100,13 @@ export function RegionPanelShell({
           />
           <motion.aside
             key={regionId}
+            ref={panelRef}
+            tabIndex={-1}
             role="dialog"
             aria-modal="true"
             aria-label={def.name}
             className={cn(
-              "fixed z-[35] glass-deep border-l border-white/10",
+              "fixed z-[35] glass-deep border-l border-white/10 outline-none",
               "max-md:inset-x-0 max-md:bottom-0 max-md:top-auto max-md:max-h-[86vh] max-md:rounded-t-xl max-md:border-t max-md:border-l-0",
               "md:inset-y-0 md:right-0 md:w-[min(100vw,30rem)]",
               "flex flex-col scanlines overflow-hidden",

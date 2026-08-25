@@ -240,6 +240,7 @@ export function RegionLinks() {
   );
 
   const dummy = useMemo(() => new THREE.Object3D(), []);
+  const tmpPoint = useMemo(() => new THREE.Vector3(), []);
   const PULSES_PER_LINK = 2;
   const total = links.length * PULSES_PER_LINK;
 
@@ -247,19 +248,19 @@ export function RegionLinks() {
     const inst = pulsesRef.current;
     if (!inst) return;
     let i = 0;
-    links.forEach((l, li) => {
+    for (let li = 0; li < links.length; li++) {
+      const speed = 0.11 + (li % 5) * 0.016;
       for (let p = 0; p < PULSES_PER_LINK; p++) {
-        const speed = 0.11 + (li % 5) * 0.016;
         const t =
           (clock.elapsedTime * speed + p / PULSES_PER_LINK + li * 0.37) % 1;
-        const pos = l.curve.getPoint(t);
+        const pos = links[li].curve.getPoint(t, tmpPoint);
         dummy.position.copy(pos);
         const s = 0.06 + Math.sin(t * Math.PI) * 0.05;
         dummy.scale.setScalar(s);
         dummy.updateMatrix();
         inst.setMatrixAt(i++, dummy.matrix);
       }
-    });
+    }
     inst.instanceMatrix.needsUpdate = true;
   });
 
@@ -424,6 +425,7 @@ export function CameraRig({
     target: THREE.Vector3;
   } | null>(null);
   const introT = useRef(0);
+  const lastFocus = useRef("");
   const reduced =
     typeof window !== "undefined" &&
     window.matchMedia("(prefers-reduced-motion: reduce)").matches;

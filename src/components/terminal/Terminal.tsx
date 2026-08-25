@@ -8,6 +8,7 @@ import { REGIONS } from "@/lib/config/regions";
 import { IDENTITY } from "@/lib/config/identity";
 import { DISCOVERIES, ACHIEVEMENTS } from "@/lib/game/catalog";
 import { playSound, isSoundEnabled, setSoundEnabled } from "@/lib/audio/sound";
+import { secondsSince } from "@/lib/utils";
 import type { TerminalLine } from "@/types";
 
 /* ═══════════════════════════════════════════════════════════
@@ -220,7 +221,7 @@ export function Terminal({
         out(
           L("out", `presence      ${derivePresenceLine(lanyard)}`)
         );
-        out(L("out", `discord       ${health.discord.state.toUpperCase()}${health.discord.lastSync ? ` — synced ${Math.round((Date.now() - health.discord.lastSync) / 1000)}s ago` : ""}`));
+        out(L("out", `discord       ${health.discord.state.toUpperCase()}${health.discord.lastSync ? ` — synced ${secondsSince(health.discord.lastSync)}s ago` : ""}`));
         out(L("out", `github        ${health.github.state.toUpperCase()}`));
         out(L("out", `chess         ${health.chess.state.toUpperCase()}`));
         out(L("out", `spotify       ${health.spotify.state === "live" ? "LIVE (enrichment)" : "NOT CONNECTED (enrichment)"}`));

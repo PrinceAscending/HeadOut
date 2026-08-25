@@ -6,6 +6,7 @@ import { useWorld } from "@/lib/world/store";
 import { useGame } from "@/lib/game/store";
 import { playSound } from "@/lib/audio/sound";
 import { Chip, DataRow, LiveIndicator, SectionTitle, SystemLabel } from "@/components/ui/holo/primitives";
+import { secondsSince } from "@/lib/utils";
 import type { GitHubRepo } from "@/types";
 
 /* ═══════════════════════════════════════════════════════════
@@ -273,7 +274,11 @@ export function CodeCity() {
                 right={
                   <LiveIndicator
                     state={health.state}
-                    note={health.lastSync ? `SYNCED ${Math.round((Date.now() - health.lastSync) / 1000)}S AGO` : undefined}
+                    note={
+                      health.lastSync
+                        ? `SYNCED ${secondsSince(health.lastSync)}S AGO`
+                        : undefined
+                    }
                   />
                 }
               >

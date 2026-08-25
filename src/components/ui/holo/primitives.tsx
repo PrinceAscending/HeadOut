@@ -70,10 +70,13 @@ export function RegionLabel({
 export function LiveIndicator({
   state,
   label,
+  note,
   className,
 }: {
   state: "live" | "connecting" | "degraded" | "offline" | "unconfigured" | boolean;
   label?: string;
+  /** secondary dim text after the state word, e.g. a sync age */
+  note?: ReactNode;
   className?: string;
 }) {
   const isBool = typeof state === "boolean";
@@ -111,6 +114,11 @@ export function LiveIndicator({
       >
         {text}
       </span>
+      {note ? (
+        <span className="font-mono text-[9px] tracking-[0.14em] text-wx-dim/70">
+          {note}
+        </span>
+      ) : null}
       <span className="sr-only">{s === "live" ? "live" : s}</span>
     </span>
   );

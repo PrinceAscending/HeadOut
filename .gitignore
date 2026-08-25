@@ -34,3 +34,6 @@ next-env.d.ts
 
 # prisma sqlite (local only)
 db/*.db
+
+# claude code local state
+.claude/

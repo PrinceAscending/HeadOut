@@ -61,7 +61,7 @@ function RatingPillar({
   );
 }
 
-function RecordBar({ w, l, d }: { w: number; l: number; d: number }) {
+function RecordBar({ win: w, loss: l, draw: d }: { win: number; loss: number; draw: number }) {
   const total = Math.max(1, w + l + d);
   return (
     <div>
