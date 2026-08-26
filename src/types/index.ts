@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════
-   PRINCE // WORLD — shared type system
+   PRINCE // HEADOUT — shared type system
    ═══════════════════════════════════════════════════════════ */
 
 export type RegionId =

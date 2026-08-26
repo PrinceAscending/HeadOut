@@ -123,7 +123,7 @@ export function BootSequence({ onEnter }: { onEnter: () => void }) {
   const [lineStates, setLineStates] = useState<Record<string, "wait" | "done">>({});
   const rootRef = useRef<HTMLDivElement>(null);
 
-  const title = "PRINCE // WORLD.OS";
+  const title = "PRINCE // HEADOUT.OS";
   const sub = "INITIALIZING DIGITAL WORLD...";
   const { out: typedTitle } = useTyped(title, 34, true);
   const { out: typedSub } = useTyped(sub, 20, true);

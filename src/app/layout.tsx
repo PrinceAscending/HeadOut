@@ -17,12 +17,12 @@ const mono = JetBrains_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL("https://princeheadout.vercel.app"),
   title: {
-    default: "PRINCE // WORLD",
-    template: "%s — PRINCE // WORLD",
+    default: "PRINCE // HEADOUT",
+    template: "%s — PRINCE // HEADOUT",
   },
   description:
     "An explorable real-time digital universe. Enter the world. Explore. Connect. Discover. Unlock. Meet Prince.",
-  applicationName: "PRINCE // WORLD.OS",
+  applicationName: "PRINCE // HEADOUT.OS",
   keywords: [
     "Prince",
     "PrinceAscending",
@@ -33,23 +33,23 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: "Prince", url: "https://github.com/PrinceAscending" }],
   openGraph: {
-    title: "PRINCE // WORLD",
+    title: "PRINCE // HEADOUT",
     description: "An explorable real-time digital universe.",
     url: "https://princeheadout.vercel.app",
-    siteName: "PRINCE // WORLD",
+    siteName: "PRINCE // HEADOUT",
     type: "website",
     images: [
       {
         url: "/og.png",
         width: 1200,
         height: 630,
-        alt: "PRINCE // WORLD — an explorable real-time digital universe",
+        alt: "PRINCE // HEADOUT — an explorable real-time digital universe",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "PRINCE // WORLD",
+    title: "PRINCE // HEADOUT",
     description: "An explorable real-time digital universe.",
     images: ["/og.png"],
   },

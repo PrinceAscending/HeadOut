@@ -1,4 +1,4 @@
-# PRINCE // WORLD
+# PRINCE // HEADOUT
 
 > An explorable real-time digital universe.
 > **The website is not the profile — the website is the experience of discovering Prince.**
