@@ -42,7 +42,7 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
 
-  /* ── PRINCE // WORLD custom tokens ─────────────────────────── */
+  /* ── PRINCE // HEADOUT custom tokens ────────────────────────── */
   --color-wx-cyan: var(--wx-cyan);
   --color-wx-violet: var(--wx-violet);
   --color-wx-green: var(--wx-green);
@@ -339,34 +339,12 @@
   }
 }
 
-@keyframes wx-ring {
-  0% {
-    box-shadow: 0 0 0 0 rgba(85, 230, 255, 0.35);
-  }
-  70% {
-    box-shadow: 0 0 0 12px rgba(85, 230, 255, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(85, 230, 255, 0);
-  }
-}
-
 @keyframes wx-scan-y {
   0% {
-    top: -8%;
+    transform: translateY(-4px);
   }
   100% {
-    top: 108%;
-  }
-}
-
-@keyframes wx-float {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-6px);
+    transform: translateY(44px);
   }
 }
 
@@ -400,27 +378,12 @@
   }
 }
 
-@keyframes wx-fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
 @keyframes wx-sweep {
   0% {
     transform: translateX(-120%);
   }
   100% {
     transform: translateX(320%);
-  }
-}
-
-@keyframes wx-spin-slow {
-  to {
-    transform: rotate(360deg);
   }
 }
 
@@ -438,20 +401,8 @@
 .wx-animate-pulse {
   animation: wx-pulse 2.6s ease-in-out infinite;
 }
-.wx-animate-ring {
-  animation: wx-ring 2.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-.wx-animate-float {
-  animation: wx-float 5s ease-in-out infinite;
-}
 .wx-animate-blink {
   animation: wx-blink 1.1s steps(1) infinite;
-}
-.wx-animate-fade-in {
-  animation: wx-fade-in 0.5s ease-out both;
-}
-.wx-animate-spin-slow {
-  animation: wx-spin-slow 14s linear infinite;
 }
 .wx-animate-glitch {
   animation: wx-glitch-x 0.3s steps(2) infinite;

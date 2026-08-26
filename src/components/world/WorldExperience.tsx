@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import dynamic from "next/dynamic";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, MotionConfig, motion } from "framer-motion";
 import { BootSequence } from "@/components/boot/BootSequence";
 import { CentralCore } from "@/components/regions/CentralCore";
 import { CodeCity } from "@/components/regions/CodeCity";
@@ -24,6 +24,7 @@ import { IDENTITY } from "@/lib/config/identity";
 import { REGIONS } from "@/lib/config/regions";
 import { initSoundFromStorage, setSoundEnabled, isSoundEnabled, playSound } from "@/lib/audio/sound";
 import { LiveIndicator } from "@/components/ui/holo/primitives";
+import { EASE_EXPO, SPRING_HUD, HUD_TIMELINE, HUD_DURATION } from "@/lib/world/motion";
 
 const WorldCanvas = dynamic(() => import("@/components/world/WorldCanvas"), {
   ssr: false,
@@ -288,6 +289,7 @@ export function WorldExperience() {
   const avatarHash = lanyard?.discord_user?.avatar;
 
   return (
+    <MotionConfig reducedMotion="user">
     <div className="fixed inset-0 overflow-hidden bg-[#04040a]">
       {/* ── boot ── */}
       <AnimatePresence>{!entered && <BootSequence key="boot" onEnter={handleEnter} />}</AnimatePresence>
@@ -298,7 +300,7 @@ export function WorldExperience() {
           className="absolute inset-0"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 1.4, delay: 0.2 }}
+          transition={{ duration: 0.9, delay: HUD_TIMELINE.world, ease: EASE_EXPO }}
         >
           {webglOk ? (
             <WebGLBoundary onFail={() => setWebglOk(false)}>
@@ -312,7 +314,6 @@ export function WorldExperience() {
                     setActivePanel(id);
                   }
                 }}
-                onHover={() => {}}
               />
             </WebGLBoundary>
           ) : (
@@ -326,17 +327,17 @@ export function WorldExperience() {
           {/* ── HUD top bar ── */}
           <motion.header
             className="absolute top-0 inset-x-0 z-20 flex items-center justify-between gap-2 px-3 sm:px-5 py-2.5 sm:py-3 pointer-events-none"
-            initial={{ y: -30, opacity: 0 }}
+            initial={{ y: -16, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 1, duration: 0.8 }}
+            transition={{ delay: HUD_TIMELINE.header, duration: HUD_DURATION, ease: EASE_EXPO }}
           >
             <div className="flex items-center gap-2 sm:gap-3 pointer-events-auto min-w-0">
               <button
                 onClick={logoClick}
                 className={`font-sans font-bold tracking-[0.14em] sm:tracking-[0.18em] text-white text-[12.5px] sm:text-base text-left shrink-0 ${glitch ? "wx-animate-glitch" : ""}`}
-                aria-label="PRINCE WORLD — home"
+                aria-label="PRINCE HEADOUT — home"
               >
-                PRINCE <span className="text-wx-cyan">{"//"}</span> WORLD
+                PRINCE <span className="text-wx-cyan">{"//"}</span> HEADOUT
               </button>
               <div className="hidden lg:flex items-center gap-4 font-mono text-[9.5px] tracking-[0.2em]">
                 <LiveIndicator state={health.discord.state} label="DISCORD" />
@@ -369,16 +370,21 @@ export function WorldExperience() {
 
           {/* ── presence card (above dock on mobile, bottom-left on desktop) ── */}
           <motion.div
-            className="absolute left-3 sm:left-5 z-20 pointer-events-auto max-w-[calc(100vw-1.5rem)] max-md:bottom-[86px] md:bottom-5"
-            initial={{ y: 30, opacity: 0 }}
+            className="absolute left-3 sm:left-5 z-20 pointer-events-auto max-w-[calc(100vw-1.5rem)] max-md:bottom-[calc(max(0.625rem,env(safe-area-inset-bottom))+76px)] md:bottom-5"
+            initial={{ y: 16, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 1.4, duration: 0.8 }}
+            transition={{ delay: HUD_TIMELINE.presence, duration: HUD_DURATION, ease: EASE_EXPO }}
           >
-            <button
+            <motion.button
               onClick={() => {
+                /* shell plays "open" on a fresh open — give repeat
+                   taps on the already-active region their own cue */
+                if (useWorld.getState().activePanel === "core") playSound("click");
                 setActivePanel("core");
-                playSound("open");
               }}
+              whileHover={{ y: -2 }}
+              whileTap={{ scale: 0.98 }}
+              transition={SPRING_HUD}
               className="glass clip-panel edge-lit px-3.5 py-2.5 sm:px-4 sm:py-3 flex items-center gap-3 text-left hover:border-wx-cyan/40 transition-colors"
               aria-label="Open Central Core — current presence"
             >
@@ -414,25 +420,32 @@ export function WorldExperience() {
                   {presenceLine}
                 </span>
               </span>
-            </button>
+            </motion.button>
           </motion.div>
 
           {/* ── region dock (bottom-center) ── */}
           <motion.nav
             className="absolute bottom-[max(0.625rem,env(safe-area-inset-bottom))] sm:bottom-5 left-1/2 -translate-x-1/2 z-20 pointer-events-auto"
-            initial={{ y: 30, opacity: 0 }}
+            initial={{ y: 16, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 1.6, duration: 0.8 }}
+            transition={{ delay: HUD_TIMELINE.dock, duration: HUD_DURATION, ease: EASE_EXPO }}
             aria-label="Quick travel"
           >
-            <div className="glass clip-btn px-1.5 py-1.5 sm:px-2 sm:py-2 flex items-center gap-0.5 sm:gap-1 overflow-x-auto no-scrollbar max-w-[calc(100vw-1.5rem)]">
+            <div className="relative max-w-[calc(100vw-1.5rem)]">
+              {/* layoutScroll: keep layoutId projections fresh while this scroller moves */}
+              <motion.div
+                layoutScroll
+                className="glass clip-btn px-1.5 py-1.5 sm:px-2 sm:py-2 flex items-center gap-0.5 sm:gap-1 overflow-x-auto no-scrollbar"
+              >
               {REGIONS.filter((r) => !r.hidden).map((r) => (
-                <button
+                <motion.button
                   key={r.id}
                   onClick={() => {
-                    playSound("open");
+                    if (useWorld.getState().activePanel === r.id) playSound("click");
                     setActivePanel(r.id);
                   }}
+                  whileTap={{ scale: 0.9 }}
+                  transition={SPRING_HUD}
                   className="group relative w-11 h-11 grid place-items-center shrink-0"
                   title={r.name}
                   aria-label={`Travel to ${r.name}`}
@@ -443,15 +456,18 @@ export function WorldExperience() {
                   >
                     {r.code}
                   </span>
-                  <span
-                    className="absolute bottom-0.5 h-[2px] transition-all"
-                    style={{
-                      background: r.color,
-                      width: activePanel === r.id ? 18 : 0,
-                      boxShadow: `0 0 8px ${r.color}`,
-                    }}
-                  />
-                </button>
+                  {activePanel === r.id && (
+                    <motion.span
+                      layoutId="dock-underline"
+                      transition={SPRING_HUD}
+                      className="absolute bottom-0.5 h-[2px] w-[18px]"
+                      style={{
+                        background: r.color,
+                        boxShadow: `0 0 8px ${r.color}`,
+                      }}
+                    />
+                  )}
+                </motion.button>
               ))}
               <span className="w-px h-6 bg-white/10 mx-0.5 sm:mx-1 shrink-0" />
               <button
@@ -466,6 +482,10 @@ export function WorldExperience() {
               >
                 &gt;_
               </button>
+              </motion.div>
+              {/* edge fades — hint that the dock scrolls on narrow screens */}
+              <span aria-hidden className="pointer-events-none absolute inset-y-0 left-0 w-6 bg-gradient-to-r from-[#0a0e16] to-transparent md:hidden" />
+              <span aria-hidden className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-[#0a0e16] to-transparent md:hidden" />
             </div>
           </motion.nav>
 
@@ -474,7 +494,7 @@ export function WorldExperience() {
             className="absolute bottom-5 right-5 z-20 hidden lg:block pointer-events-none font-mono text-[9.5px] tracking-[0.3em] text-wx-dim/80 text-right"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 2 }}
+            transition={{ delay: HUD_TIMELINE.coords, duration: HUD_DURATION, ease: EASE_EXPO }}
           >
             <div>NODE // IN-1 · SECTOR 7G</div>
             <div className="mt-1">DRAG TO ORBIT · SCROLL TO ZOOM · CLICK NODE TO TRAVEL</div>
@@ -484,10 +504,11 @@ export function WorldExperience() {
           <AnimatePresence>
             {faultVisible && (
               <motion.button
-                initial={{ opacity: 0, y: -12 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                className="absolute top-20 left-1/2 -translate-x-1/2 z-30 border border-wx-red/50 bg-wx-red/10 backdrop-blur px-4 py-2 font-mono text-[10px] tracking-[0.3em] text-wx-red clip-btn wx-animate-glitch"
+                initial={{ opacity: 0, y: -14, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                transition={{ duration: 0.45, ease: EASE_EXPO }}
+                className="absolute top-20 left-1/2 -translate-x-1/2 z-30 border border-wx-red/50 bg-wx-red/10 backdrop-blur px-4 py-2 font-mono text-[10px] tracking-[0.3em] text-wx-red clip-btn hover:border-wx-red hover:bg-wx-red/20 transition-colors overflow-hidden"
                 onClick={() => {
                   setFaultVisible(false);
                   useGame.getState().markFaultPortal();
@@ -496,7 +517,13 @@ export function WorldExperience() {
                   playSound("secret");
                 }}
               >
-                ⚠ SIGNAL FAULT — CLICK TO TRACE
+                <span className="wx-animate-glitch relative z-10">⚠ SIGNAL FAULT — CLICK TO TRACE</span>
+                {/* scan sweep */}
+                <span
+                  aria-hidden
+                  className="absolute left-0 right-0 h-px bg-wx-red/70"
+                  style={{ animation: "wx-scan-y 1.6s linear infinite" }}
+                />
               </motion.button>
             )}
           </AnimatePresence>
@@ -520,6 +547,7 @@ export function WorldExperience() {
         </motion.div>
       )}
     </div>
+    </MotionConfig>
   );
 }
 

@@ -49,16 +49,33 @@ export function RegionNode({
   const mesh = useRef<THREE.Mesh>(null);
   const ring = useRef<THREE.Mesh>(null);
   const halo = useRef<THREE.Sprite>(null);
+  const burst = useRef<THREE.Mesh>(null);
+  const burstT = useRef(1); /* 1 = idle/done */
+  const prevVisited = useRef(visited);
   const [hovered, setHovered] = useState(false);
 
   const color = useMemo(() => new THREE.Color(def.color), [def.color]);
   const isUnknown = def.id === "unknown";
+  const reduced = useMemo(
+    () =>
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+    []
+  );
 
-  useFrame(({ clock }) => {
+  /* one-shot discovery burst when the node becomes visited */
+  useEffect(() => {
+    if (visited && !prevVisited.current) burstT.current = 0;
+    prevVisited.current = visited;
+  }, [visited]);
+
+  useFrame(({ clock }, delta) => {
     const t = clock.elapsedTime;
     const live = active || (def.id === "core" && activitySignal.core);
     if (mesh.current) {
-      const pulse = live ? 1 + Math.sin(t * 2.4) * 0.14 : 1 + Math.sin(t * 0.8) * 0.03;
+      const pulse = live
+        ? 1 + Math.sin(t * 2.4) * (reduced ? 0.02 : 0.14)
+        : 1 + Math.sin(t * 0.8) * (reduced ? 0 : 0.03);
       mesh.current.scale.setScalar(hovered ? pulse * 1.25 : pulse);
       const mat = mesh.current.material as THREE.MeshBasicMaterial;
       mat.color.copy(color);
@@ -69,8 +86,8 @@ export function RegionNode({
       }
     }
     if (ring.current) {
-      ring.current.rotation.z = t * (live ? 0.8 : 0.25);
-      ring.current.rotation.x = Math.PI / 2 + Math.sin(t * 0.4) * 0.12;
+      ring.current.rotation.z = t * (live ? (reduced ? 0.1 : 0.8) : reduced ? 0.04 : 0.25);
+      ring.current.rotation.x = Math.PI / 2 + Math.sin(t * 0.4) * (reduced ? 0 : 0.12);
       const s = (hovered ? 1.35 : 1) * (visited ? 1 : 0.8);
       ring.current.scale.setScalar(s);
       const mat = ring.current.material as THREE.MeshBasicMaterial;
@@ -80,7 +97,8 @@ export function RegionNode({
           : (hovered ? 0.9 : visited ? 0.55 : 0.3) * (live ? 1.4 : 1);
     }
     if (halo.current) {
-      const s = (live ? 2.6 + Math.sin(t * 2.4) * 0.5 : 1.9) * (hovered ? 1.3 : 1);
+      const s =
+        (live ? 2.6 + Math.sin(t * 2.4) * (reduced ? 0 : 0.5) : 1.9) * (hovered ? 1.3 : 1);
       halo.current.scale.setScalar(s);
       const mat = halo.current.material as THREE.SpriteMaterial;
       mat.opacity =
@@ -89,7 +107,22 @@ export function RegionNode({
       mat.color.copy(tmpColor);
     }
     if (group.current) {
-      group.current.position.y = def.y + Math.sin(t * 0.6 + def.x) * 0.18;
+      group.current.position.y =
+        def.y + Math.sin(t * 0.6 + def.x) * (reduced ? 0 : 0.18);
+    }
+    /* discovery burst: expanding ring, ease-out, one-shot */
+    if (burst.current) {
+      const bmat = burst.current.material as THREE.MeshBasicMaterial;
+      if (burstT.current < 1) {
+        burstT.current = Math.min(1, burstT.current + delta / 0.9);
+        const e = 1 - Math.pow(1 - burstT.current, 3);
+        burst.current.visible = true;
+        burst.current.scale.setScalar(0.8 + e * 2.4);
+        bmat.opacity = (1 - e) * 0.85;
+      } else if (burst.current.visible) {
+        burst.current.visible = false;
+        bmat.opacity = 0;
+      }
     }
   });
 
@@ -117,7 +150,7 @@ export function RegionNode({
           onSelect(def.id);
           return;
         }
-        playSound("open");
+        /* open sound is played once by the panel shell on mount */
         onSelect(def.id);
       }}
     >
@@ -170,6 +203,19 @@ export function RegionNode({
           />
         </mesh>
       )}
+      {/* discovery burst ring (hidden until triggered) */}
+      <mesh ref={burst} rotation={[Math.PI / 2, 0, 0]} visible={false}>
+        <ringGeometry args={[0.9, 0.98, 48]} />
+        <meshBasicMaterial
+          color={color}
+          transparent
+          opacity={0}
+          side={THREE.DoubleSide}
+          blending={THREE.AdditiveBlending}
+          depthWrite={false}
+          toneMapped={false}
+        />
+      </mesh>
       {/* sub particle sparkle for live nodes */}
       {active && <LiveOrbit color={color} />}
     </group>
@@ -192,8 +238,14 @@ function LiveOrbit({ color }: { color: THREE.Color }) {
     g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
     return g;
   }, []);
+  const reduced = useMemo(
+    () =>
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+    []
+  );
   useFrame(({ clock }) => {
-    if (ref.current) ref.current.rotation.y = clock.elapsedTime * 1.4;
+    if (ref.current) ref.current.rotation.y = clock.elapsedTime * (reduced ? 0.12 : 1.4);
   });
   return (
     <points ref={ref} geometry={geo}>
@@ -426,9 +478,12 @@ export function CameraRig({
   } | null>(null);
   const introT = useRef(0);
   const lastFocus = useRef("");
-  const reduced =
-    typeof window !== "undefined" &&
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const reduced = useMemo(
+    () =>
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+    []
+  );
 
   /* cinematic intro sweep */
   useFrame((state, delta) => {
@@ -436,7 +491,7 @@ export function CameraRig({
     const ctrl = state.controls as any;
     if (!introDone) {
       introT.current = Math.min(1, introT.current + delta / (reduced ? 0.1 : 2.6));
-      const e = 1 - Math.pow(1 - introT.current, 3);
+      const e = 1 - Math.pow(1 - introT.current, 4);
       cam.position.set(
         THREE.MathUtils.lerp(0, 0.5, e),
         THREE.MathUtils.lerp(46, 15, e),
@@ -449,10 +504,11 @@ export function CameraRig({
 
     if (anim.current) {
       anim.current.t = Math.min(1, anim.current.t + delta / 1.1);
-      const e =
-        anim.current.t < 0.5
-          ? 4 * Math.pow(anim.current.t, 3)
-          : 1 - Math.pow(-2 * anim.current.t + 2, 3) / 2;
+      /* ease-out-back (subtle) — the camera settles into focus instead of stopping dead */
+      const c1 = 0.9;
+      const c3 = c1 + 1;
+      const u = anim.current.t - 1;
+      const e = 1 + c3 * u * u * u + c1 * u * u;
       cam.position.lerpVectors(anim.current.from, anim.current.to, e);
       ctrl?.target?.lerp(anim.current.target, 0.08);
       if (anim.current.t >= 1) anim.current = null;

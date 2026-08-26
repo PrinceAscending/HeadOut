@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import type { ReactNode } from "react";
 
 /* ═══════════════════════════════════════════════════════════
-   PRINCE // WORLD — holographic design primitives.
+   PRINCE // HEADOUT — holographic design primitives.
    Thin lines. Translucent surfaces. Restraint.
    ═══════════════════════════════════════════════════════════ */
 
@@ -27,43 +27,6 @@ export function SystemLabel({
     >
       {children}
     </span>
-  );
-}
-
-export function RegionLabel({
-  code,
-  name,
-  color,
-  active,
-  className,
-}: {
-  code: string;
-  name: string;
-  color?: string;
-  active?: boolean;
-  className?: string;
-}) {
-  return (
-    <div className={cn("flex items-center gap-3", className)}>
-      <span
-        className="font-mono text-[10px] px-1.5 py-0.5 border leading-none clip-tag"
-        style={{
-          color: color ?? "var(--wx-cyan)",
-          borderColor: `${color ?? "var(--wx-cyan)"}44`,
-          background: `${color ?? "var(--wx-cyan)"}0f`,
-        }}
-      >
-        {code}
-      </span>
-      <span
-        className={cn(
-          "font-sans text-sm tracking-[0.18em] font-medium",
-          active ? "text-white" : "text-foreground/80"
-        )}
-      >
-        {name}
-      </span>
-    </div>
   );
 }
 
@@ -104,12 +67,15 @@ export function LiveIndicator({
   return (
     <span className={cn("inline-flex items-center gap-1.5", className)}>
       <span
-        className={cn("w-1.5 h-1.5 rounded-full", s === "live" && "wx-animate-pulse")}
+        className={cn(
+          "w-1.5 h-1.5 rounded-full transition-all duration-500",
+          s === "live" && "wx-animate-pulse"
+        )}
         style={{ background: color, boxShadow: `0 0 8px ${color}` }}
         aria-hidden
       />
       <span
-        className="font-mono text-[10px] tracking-[0.18em]"
+        className="font-mono text-[10px] tracking-[0.18em] transition-colors duration-500"
         style={{ color }}
       >
         {text}
@@ -121,33 +87,6 @@ export function LiveIndicator({
       ) : null}
       <span className="sr-only">{s === "live" ? "live" : s}</span>
     </span>
-  );
-}
-
-export function HoloCard({
-  children,
-  className,
-  glow,
-  as: Tag = "div",
-  ...rest
-}: {
-  children: ReactNode;
-  className?: string;
-  glow?: string;
-  as?: "div" | "button";
-} & Record<string, unknown>) {
-  return (
-    <Tag
-      className={cn(
-        "relative glass clip-panel edge-lit p-4 transition-colors duration-300",
-        "hover:border-white/20",
-        className
-      )}
-      style={glow ? ({ boxShadow: `inset 0 0 40px ${glow}12` } as never) : undefined}
-      {...rest}
-    >
-      {children}
-    </Tag>
   );
 }
 
@@ -254,32 +193,6 @@ export function AsciiBar({
       <span className="text-wx-cyan">{"█".repeat(filled)}</span>
       <span className="text-white/15">{"░".repeat(blocks - filled)}</span>
       <span className="text-wx-dim ml-2 tabular-nums">{Math.round(pct * 100)}%</span>
-    </span>
-  );
-}
-
-export function SignalBars({
-  level,
-  color,
-  className,
-}: {
-  level: number; // 0-4
-  color?: string;
-  className?: string;
-}) {
-  return (
-    <span className={cn("inline-flex items-end gap-[2px]", className)} aria-hidden>
-      {[0, 1, 2, 3].map((i) => (
-        <span
-          key={i}
-          className="w-[3px] transition-all duration-300"
-          style={{
-            height: 4 + i * 3,
-            background: i <= level ? color ?? "var(--wx-cyan)" : "rgba(255,255,255,0.12)",
-            boxShadow: i <= level ? `0 0 6px ${color ?? "var(--wx-cyan)"}88` : undefined,
-          }}
-        />
-      ))}
     </span>
   );
 }

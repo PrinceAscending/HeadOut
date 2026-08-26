@@ -6,7 +6,8 @@ import { REGION_MAP } from "@/lib/config/regions";
 import { useGame } from "@/lib/game/store";
 import { useWorld } from "@/lib/world/store";
 import { playSound } from "@/lib/audio/sound";
-import { LiveIndicator, SystemLabel } from "@/components/ui/holo/primitives";
+import { SystemLabel } from "@/components/ui/holo/primitives";
+import { SPRING_SURFACE, fadeUp, staggerChildren } from "@/lib/world/motion";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import type { RegionId } from "@/types";
@@ -115,8 +116,8 @@ export function RegionPanelShell({
             initial={isMobile ? { y: "100%", opacity: 0.6 } : { x: "100%", opacity: 0.6 }}
             animate={isMobile ? { y: 0, opacity: 1 } : { x: 0, opacity: 1 }}
             exit={isMobile ? { y: "100%", opacity: 0.4 } : { x: "100%", opacity: 0.4 }}
-            transition={{ type: "spring", stiffness: 260, damping: 30 }}
-            drag="y"
+            transition={SPRING_SURFACE}
+            drag={isMobile ? "y" : false}
             dragConstraints={{ top: 0, bottom: 0 }}
             dragElastic={{ top: 0, bottom: 0.4 }}
             onDragEnd={(_, info) => {
@@ -172,13 +173,20 @@ export function RegionPanelShell({
               </div>
             </header>
 
-            {/* body */}
+            {/* body — one staggered entrance for every panel's sections.
+                Panels mark their top-level sections with variants={fadeUp}. */}
             <div className="flex-1 overflow-y-auto wx-scroll px-5 py-5">
-              {children}
+              <motion.div
+                variants={staggerChildren(0.055, 0.05)}
+                initial="hidden"
+                animate="show"
+              >
+                {children}
+              </motion.div>
             </div>
 
             <footer className="shrink-0 px-5 py-2.5 border-t border-white/8 flex items-center justify-between mb-[env(safe-area-inset-bottom)]">
-              <SystemLabel className="text-[10px]">PRINCE // WORLD</SystemLabel>
+              <SystemLabel className="text-[10px]">PRINCE // HEADOUT</SystemLabel>
               <span className="font-mono text-[10px] tracking-[0.2em] text-wx-dim">
                 ESC TO EXIT
               </span>
@@ -187,25 +195,5 @@ export function RegionPanelShell({
         </>
       )}
     </AnimatePresence>
-  );
-}
-
-/* status strip reused across regions */
-export function PanelStatus({
-  items,
-}: {
-  items: { label: string; state: Parameters<typeof LiveIndicator>[0]["state"]; note?: string }[];
-}) {
-  return (
-    <div className="flex flex-wrap gap-x-5 gap-y-2">
-      {items.map((i) => (
-        <span key={i.label} className="inline-flex items-center gap-2">
-          <span className="font-mono text-[10px] tracking-[0.2em] text-wx-dim">
-            {i.label}
-          </span>
-          <LiveIndicator state={i.state} label={i.note} />
-        </span>
-      ))}
-    </div>
   );
 }

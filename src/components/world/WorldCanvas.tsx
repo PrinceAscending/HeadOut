@@ -1,12 +1,15 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas } from "@react-three/fiber";
 import { Html, OrbitControls } from "@react-three/drei";
+import { motion, useAnimationControls } from "framer-motion";
 import { REGIONS } from "@/lib/config/regions";
 import { activitySignal } from "@/lib/world/activity-signal";
 import { useGame } from "@/lib/game/store";
+import { useWorld } from "@/lib/world/store";
 import { playSound } from "@/lib/audio/sound";
+import { EASE_EXPO } from "@/lib/world/motion";
 import type { RegionId } from "@/types";
 import {
   CameraRig,
@@ -42,13 +45,33 @@ function useQuality() {
 function NodeLabel({
   def,
   revealed,
+  visited,
   onSelect,
 }: {
   def: (typeof REGIONS)[number];
   revealed: boolean;
+  visited: boolean;
   onSelect: (id: RegionId) => void;
 }) {
+  /* store-driven: a hover re-renders only this label, not the scene subtree */
+  const hovered = useWorld((s) => s.hoveredRegion) === def.id;
+  const setHoveredRegion = useWorld((s) => s.setHoveredRegion);
   const show = def.id !== "unknown" || revealed;
+  const controls = useAnimationControls();
+  const prevVisited = useRef(visited);
+
+  /* one-shot flare when the region is first visited — never for
+     already-visited regions at world load */
+  useEffect(() => {
+    if (visited === prevVisited.current) return;
+    prevVisited.current = visited;
+    if (!visited) return;
+    void controls.start({
+      scale: [1, 1.24, 1],
+      transition: { duration: 0.9, ease: EASE_EXPO },
+    });
+  }, [visited, controls]);
+
   if (!show) return null;
   const isUnknown = def.id === "unknown";
   return (
@@ -61,25 +84,33 @@ function NodeLabel({
       <button
         onClick={(e) => {
           e.stopPropagation();
-          playSound("open");
           onSelect(def.id);
         }}
+        /* the label floats above the node and swallows canvas pointer
+           events — drive the same hover signal from here too */
+        onPointerOver={() => setHoveredRegion(def.id)}
+        onPointerOut={() => setHoveredRegion(null)}
         className="group flex flex-col items-center gap-0.5 -translate-y-1 cursor-pointer"
         style={{ pointerEvents: "auto" }}
         aria-label={`Enter ${def.name}`}
       >
-        <span
-          className="font-sans text-[10px] sm:text-[11px] tracking-[0.3em] whitespace-nowrap px-2 py-0.5 transition-all duration-300"
+        <motion.span
+          animate={controls}
+          className="font-sans text-[10px] sm:text-[11px] tracking-[0.3em] whitespace-nowrap px-2 py-0.5 inline-block"
           style={{
             color: isUnknown ? "rgba(255,255,255,0.75)" : `${def.color}`,
-            textShadow: `0 0 14px ${def.color}66`,
-            opacity: 0.85,
+            textShadow: hovered
+              ? `0 0 22px ${def.color}aa, 0 0 6px ${def.color}55`
+              : `0 0 14px ${def.color}66`,
+            opacity: hovered ? 1 : 0.85,
+            transition: "opacity 0.25s ease",
           }}
         >
           {isUnknown && !revealed ? "???" : def.name}
-        </span>
+        </motion.span>
         <span
-          className="font-mono text-[9.5px] tracking-[0.2em] text-white/35 opacity-0 group-hover:opacity-100 transition-opacity"
+          className="font-mono text-[9.5px] tracking-[0.2em] text-white/35 transition-opacity duration-300"
+          style={{ opacity: hovered ? 1 : 0 }}
         >
           {def.code} · ENTER
         </span>
@@ -90,14 +121,13 @@ function NodeLabel({
 
 export default function WorldCanvas({
   onSelect,
-  onHover,
 }: {
   onSelect: (id: RegionId) => void;
-  onHover: (id: RegionId | null) => void;
 }) {
   const q = useQuality();
   const [introDone, setIntroDone] = useState(false);
   const [focus, setFocus] = useState<{ x: number; y: number; z: number } | null>(null);
+  const setHoveredRegion = useWorld((s) => s.setHoveredRegion);
   const visited = useGame((s) => s.visitedRegions);
   const unknownRevealed = useGame((s) => s.unknownRevealed);
   const [activeRegions, setActiveRegions] = useState<Record<string, boolean>>({});
@@ -156,7 +186,7 @@ export default function WorldCanvas({
               visited={visited.includes(def.id)}
               active={!!activeRegions[def.id]}
               onSelect={handleSelect}
-              onHover={onHover}
+              onHover={setHoveredRegion}
             />
           ))}
           {REGIONS.map((def) => (
@@ -164,6 +194,7 @@ export default function WorldCanvas({
               key={`l-${def.id}`}
               def={def}
               revealed={unknownRevealed}
+              visited={visited.includes(def.id)}
               onSelect={handleSelect}
             />
           ))}

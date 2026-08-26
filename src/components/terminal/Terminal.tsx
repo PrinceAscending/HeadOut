@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useWorld, derivePresenceLine, STATUS_COLOR } from "@/lib/world/store";
+import { streamOracleDeltas } from "@/lib/world/sse";
 import { useGame } from "@/lib/game/store";
 import { REGIONS } from "@/lib/config/regions";
 import { IDENTITY } from "@/lib/config/identity";
@@ -62,7 +63,7 @@ export function Terminal({
   const health = useWorld((s) => s.health);
   const [oracleBusy, setOracleBusy] = useState(false);
   const [lines, setLines] = useState<TerminalLine[]>([
-    L("sys", "PRINCE // WORLD — DIRECT ACCESS TERMINAL v2.7"),
+    L("sys", "PRINCE // HEADOUT — DIRECT ACCESS TERMINAL v2.7"),
     L("sys", "connection established. type HELP for the obvious."),
   ]);
   const [input, setInput] = useState("");
@@ -113,8 +114,6 @@ export function Terminal({
         setOracleBusy(false);
         return;
       }
-      const reader = res.body!.getReader();
-      const decoder = new TextDecoder();
       let acc = "";
       let lineId = 0;
       const pushLine = () => {
@@ -122,36 +121,18 @@ export function Terminal({
         setLines((prev) => [...prev, L("accent", acc || "...")]);
       };
       pushLine();
-      let buf = "";
       let printed = 0;
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buf += decoder.decode(value, { stream: true });
-        const parts = buf.split("\n");
-        buf = parts.pop() ?? "";
-        for (const p of parts) {
-          if (!p.startsWith("data:")) continue;
-          const payload = p.slice(5).trim();
-          if (payload === "[DONE]") continue;
-          try {
-            const delta = JSON.parse(payload).choices?.[0]?.delta?.content;
-            if (typeof delta === "string" && delta) {
-              acc += delta;
-              /* update the last oracle line as tokens arrive */
-              if (acc.length - printed > 3) {
-                printed = acc.length;
-                setLines((prev) => {
-                  const next = [...prev];
-                  const idx = next.findIndex((l) => l.id === lineId);
-                  if (idx >= 0) next[idx] = { ...next[idx], text: acc };
-                  return next;
-                });
-              }
-            }
-          } catch {
-            /* partial frame */
-          }
+      for await (const delta of streamOracleDeltas(res)) {
+        acc += delta;
+        /* update the last oracle line as tokens arrive */
+        if (acc.length - printed > 3) {
+          printed = acc.length;
+          setLines((prev) => {
+            const next = [...prev];
+            const idx = next.findIndex((l) => l.id === lineId);
+            if (idx >= 0) next[idx] = { ...next[idx], text: acc };
+            return next;
+          });
         }
       }
       setLines((prev) => {

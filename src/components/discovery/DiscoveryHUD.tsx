@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { useGame } from "@/lib/game/store";
 import { useWorld } from "@/lib/world/store";
@@ -11,6 +12,7 @@ import {
 } from "@/lib/game/catalog";
 import { AsciiBar, SystemLabel } from "@/components/ui/holo/primitives";
 import { playSound } from "@/lib/audio/sound";
+import { EASE_EXPO } from "@/lib/world/motion";
 
 /* ═══════════════════════════════════════════════════════════
    Discovery HUD — world progress, always visible, expandable.
@@ -19,15 +21,18 @@ import { playSound } from "@/lib/audio/sound";
 
 export function WorldToasts() {
   const toasts = useGame((s) => s.toasts);
+  // above secret rooms (z-65) and the palette (z-70): achievements
+  // earned inside a hidden sector must stay visible
   return (
-    <div className="fixed z-[60] top-16 right-3 sm:right-4 flex flex-col gap-2 pointer-events-none max-w-[78vw]">
+    <div className="fixed z-[75] top-16 right-3 sm:right-4 flex flex-col gap-2 pointer-events-none max-w-[78vw]">
       <AnimatePresence>
         {toasts.map((t) => (
           <motion.div
             key={t.id}
             initial={{ opacity: 0, x: 40, scale: 0.97 }}
             animate={{ opacity: 1, x: 0, scale: 1 }}
-            exit={{ opacity: 0, x: 30 }}
+            exit={{ opacity: 0, x: 24, y: -6, scale: 0.98 }}
+            transition={{ duration: 0.45, ease: EASE_EXPO }}
             className="glass-deep border-l-2 px-4 py-3 clip-panel"
             style={{
               borderLeftColor:
@@ -63,6 +68,8 @@ export function WorldToasts() {
 
 export function DiscoveryHUD() {
   const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const visited = useGame((s) => s.visitedRegions);
   const discoveries = useGame((s) => s.discoveries);
   const achievements = useGame((s) => s.achievements);
@@ -70,31 +77,49 @@ export function DiscoveryHUD() {
   const percent = useGame((s) => s.discoveryPercent());
   const setActivePanel = useWorld((s) => s.setActivePanel);
 
-  return (
-    <div className="relative">
-      <button
-        onClick={() => {
-          setOpen((o) => !o);
-          playSound("click");
-        }}
-        className="glass h-10 px-2.5 sm:px-3 clip-btn flex items-center gap-2.5 hover:border-wx-cyan/40 transition-colors"
-        aria-expanded={open}
-        aria-label="World discovery progress"
-      >
-        <span className="font-mono text-[9.5px] tracking-[0.22em] text-wx-dim hidden sm:inline">
-          DISCOVERY
-        </span>
-        <AsciiBar value={percent} blocks={10} />
-      </button>
+  /* focus management + close on ESC or any pointer outside trigger + panel */
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.activeElement as HTMLElement | null;
+    panelRef.current?.focus();
+    const onDoc = (e: PointerEvent) => {
+      const target = e.target as Node;
+      if (!panelRef.current?.contains(target) && !triggerRef.current?.contains(target)) {
+        setOpen(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      /* the command palette sits above this dropdown — let it consume ESC */
+      if (useWorld.getState().paletteOpen) return;
+      /* capture phase: close only the top surface (this dropdown),
+         not an open region panel underneath */
+      e.stopPropagation();
+      setOpen(false);
+    };
+    document.addEventListener("pointerdown", onDoc);
+    document.addEventListener("keydown", onKey, true);
+    return () => {
+      document.removeEventListener("pointerdown", onDoc);
+      document.removeEventListener("keydown", onKey, true);
+      prev?.focus?.();
+    };
+  }, [open]);
 
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            className="absolute right-0 mt-2 w-72 max-w-[calc(100vw-1.5rem)] glass-deep border border-white/10 p-4 clip-panel z-50 space-y-4"
-          >
+  const panel = (
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          ref={panelRef}
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.3, ease: EASE_EXPO }}
+          className="fixed right-3 sm:right-4 top-[60px] sm:top-[64px] w-72 max-w-[calc(100vw-1.5rem)] glass-deep border border-white/10 p-4 clip-panel z-50 space-y-4 outline-none"
+          role="dialog"
+          aria-label="World discovery log"
+          tabIndex={-1}
+        >
             <div>
               <SystemLabel>REGIONS</SystemLabel>
               <div className="font-sans text-lg font-semibold tabular-nums mt-0.5">
@@ -159,8 +184,8 @@ export function DiscoveryHUD() {
               <button
                 onClick={() => {
                   setOpen(false);
+                  /* open sound plays once via the archive panel shell */
                   setActivePanel("archive");
-                  playSound("open");
                 }}
                 className="font-mono text-[10px] text-wx-cyan hover:text-white tracking-[0.2em]"
               >
@@ -170,6 +195,25 @@ export function DiscoveryHUD() {
           </motion.div>
         )}
       </AnimatePresence>
+  );
+
+  return (
+    <div className="relative" ref={triggerRef}>
+      <button
+        onClick={() => {
+          setOpen((o) => !o);
+          playSound("click");
+        }}
+        className="glass h-10 px-2.5 sm:px-3 clip-btn flex items-center gap-2.5 hover:border-wx-cyan/40 transition-colors"
+        aria-expanded={open}
+        aria-label="World discovery progress"
+      >
+        <span className="font-mono text-[9.5px] tracking-[0.22em] text-wx-dim hidden sm:inline">
+          DISCOVERY
+        </span>
+        <AsciiBar value={percent} blocks={10} />
+      </button>
+      {createPortal(panel, document.body)}
     </div>
   );
 }

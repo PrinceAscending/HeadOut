@@ -7,6 +7,7 @@ import type {
   IntegrationHealth,
   LanyardData,
   RegionActivity,
+  RegionId,
   SpotifyData,
 } from "@/types";
 
@@ -26,6 +27,9 @@ interface WorldStore {
   terminalOpen: boolean;
   activePanel: string | null;
   faultActive: boolean;
+  /* hovered map node — lives here (not component state) so hover
+     re-renders only the affected label, never the R3F scene subtree */
+  hoveredRegion: RegionId | null;
 
   setLanyard: (d: LanyardData | null) => void;
   setGithub: (d: GitHubData | null) => void;
@@ -36,6 +40,7 @@ interface WorldStore {
   setTerminalOpen: (v: boolean) => void;
   setActivePanel: (v: string | null) => void;
   setFaultActive: (v: boolean) => void;
+  setHoveredRegion: (v: RegionId | null) => void;
 }
 
 export const useWorld = create<WorldStore>((set) => ({
@@ -54,6 +59,7 @@ export const useWorld = create<WorldStore>((set) => ({
   terminalOpen: false,
   activePanel: null,
   faultActive: false,
+  hoveredRegion: null,
 
   setLanyard: (d) =>
     set({
@@ -100,6 +106,7 @@ export const useWorld = create<WorldStore>((set) => ({
   setTerminalOpen: (v) => set({ terminalOpen: v }),
   setActivePanel: (v) => set({ activePanel: v }),
   setFaultActive: (v) => set({ faultActive: v }),
+  setHoveredRegion: (v) => set({ hoveredRegion: v }),
 }));
 
 /* ── derived: which regions are live right now ──────────── */
@@ -156,7 +163,8 @@ export function derivePresenceLine(lanyard: LanyardData | null): string {
     case "dnd":
       return "DO NOT DISTURB — FOCUS LOCK";
     default:
-      return "OFFLINE — LAST KNOWN STATE PRESERVED";
+      /* status chip/dot already say OFFLINE — don't repeat it */
+      return "LAST KNOWN STATE PRESERVED";
   }
 }
 
