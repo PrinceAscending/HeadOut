@@ -1,18 +1,22 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { RegionPanelShell } from "./RegionPanelShell";
 import { GAMING_PLATFORMS, IDENTITY } from "@/lib/config/identity";
 import { useWorld, derivePresenceLine } from "@/lib/world/store";
 import { useGame } from "@/lib/game/store";
 import { playSound } from "@/lib/audio/sound";
 import { Chip, LiveIndicator, SectionTitle, SystemLabel } from "@/components/ui/holo/primitives";
+import { EASE_EXPO, fadeUp } from "@/lib/world/motion";
 
 /* ═══════════════════════════════════════════════════════════
    Gaming Zone — underground arena. Live activity only via
    Discord presence. No fabricated stats. Adapter-ready.
    ═══════════════════════════════════════════════════════════ */
+
+/* short shared fade for conditional state swaps */
+const SWAP_FADE = { duration: 0.2, ease: EASE_EXPO };
 
 /* subtle animated arena backdrop — tactical grid + smoke */
 function ArenaBackdrop({ active }: { active: boolean }) {
@@ -93,7 +97,10 @@ function ValorantArena() {
   const mins = elapsed ? Math.floor((Date.now() - elapsed) / 60000) : 0;
 
   return (
-    <div className="relative border border-wx-red/25 bg-wx-red/[0.02] p-4 clip-panel overflow-hidden">
+    <motion.div
+      variants={fadeUp}
+      className="relative border border-wx-red/25 bg-wx-red/[0.02] p-4 clip-panel overflow-hidden"
+    >
       <ArenaBackdrop active={inGame} />
       <div className="relative">
         <div className="flex items-start justify-between">
@@ -113,26 +120,38 @@ function ValorantArena() {
           IDENTITY — <span className="text-wx-red">{IDENTITY.accounts.riot.id}</span>
         </div>
 
-        {inGame ? (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="mt-3 border-l-2 border-wx-red pl-3 py-1"
-          >
-            <div className="font-mono text-[10px] text-wx-red tracking-[0.2em] wx-animate-pulse">
-              ● LIVE MATCH IN PROGRESS
-            </div>
-            <div className="font-mono text-[10px] text-foreground/50 mt-1">
-              {mins > 0 ? `SESSION ~${mins} MIN` : "SESSION JUST BEGAN"}
-            </div>
-          </motion.div>
-        ) : (
-          <div className="mt-3 font-mono text-[10px] text-wx-dim leading-relaxed">
-            NO LIVE MATCH. RANK DATA REQUIRES RIOT-API AUTH, WHICH IS NOT
-            ACTIVE ON THIS NODE — NO STATS ARE FAKED. THE ARENA LIGHTS UP
-            THE MOMENT PRESENCE SAYS &ldquo;IN GAME&rdquo;.
-          </div>
-        )}
+        <AnimatePresence mode="wait" initial={false}>
+          {inGame ? (
+            <motion.div
+              key="live"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={SWAP_FADE}
+              className="mt-3 border-l-2 border-wx-red pl-3 py-1"
+            >
+              <div className="font-mono text-[10px] text-wx-red tracking-[0.2em] wx-animate-pulse">
+                ● LIVE MATCH IN PROGRESS
+              </div>
+              <div className="font-mono text-[10px] text-foreground/50 mt-1">
+                {mins > 0 ? `SESSION ~${mins} MIN` : "SESSION JUST BEGAN"}
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="silent"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={SWAP_FADE}
+              className="mt-3 font-mono text-[10px] text-wx-dim leading-relaxed"
+            >
+              NO LIVE MATCH. RANK DATA REQUIRES RIOT-API AUTH, WHICH IS NOT
+              ACTIVE ON THIS NODE — NO STATS ARE FAKED. THE ARENA LIGHTS UP
+              THE MOMENT PRESENCE SAYS &ldquo;IN GAME&rdquo;.
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* hidden clutch protocol */}
         <button
@@ -146,7 +165,7 @@ function ValorantArena() {
           CLUTCH
         </button>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -159,7 +178,7 @@ export function GamingZone() {
       <div className="space-y-6">
         <ValorantArena />
 
-        <div>
+        <motion.div variants={fadeUp}>
           <SectionTitle>SUPPORTING PLATFORMS</SectionTitle>
           <div className="space-y-2">
             {GAMING_PLATFORMS.filter((p) => p.id !== "valorant").map((p) => (
@@ -178,9 +197,9 @@ export function GamingZone() {
               </div>
             ))}
           </div>
-        </div>
+        </motion.div>
 
-        <div>
+        <motion.div variants={fadeUp}>
           <SectionTitle>PRESENCE RELAY</SectionTitle>
           <div className="font-mono text-[10px] text-foreground/60 border-l border-wx-red/30 pl-3 py-1 tracking-wider">
             {presenceLine}
@@ -190,13 +209,13 @@ export function GamingZone() {
             across the whole world map — not just inside this panel. Watch the
             GAMING node burn red.
           </p>
-        </div>
+        </motion.div>
 
-        <div className="flex flex-wrap gap-2">
+        <motion.div variants={fadeUp} className="flex flex-wrap gap-2">
           <Chip color="#ff5470">ADAPTER: RIOT — STANDBY</Chip>
           <Chip>NO FABRICATED STATS</Chip>
           <Chip>PRESENCE-DRIVEN</Chip>
-        </div>
+        </motion.div>
       </div>
     </RegionPanelShell>
   );

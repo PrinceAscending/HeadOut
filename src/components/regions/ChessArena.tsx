@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { RegionPanelShell } from "./RegionPanelShell";
+import { OfflineState } from "./OfflineState";
 import { useWorld } from "@/lib/world/store";
 import { useGame } from "@/lib/game/store";
 import { playSound } from "@/lib/audio/sound";
 import { Chip, LiveIndicator, SectionTitle, SystemLabel } from "@/components/ui/holo/primitives";
 import { replayGame, UNICODE_PIECES, START_FEN_BOARD, fenToBoard, type Board } from "@/lib/game/pgn";
+import { EASE_EXPO, fadeUp } from "@/lib/world/motion";
 import type { ChessGame } from "@/types";
 import { IDENTITY } from "@/lib/config/identity";
 
@@ -63,12 +65,21 @@ function RatingPillar({
 
 function RecordBar({ win: w, loss: l, draw: d }: { win: number; loss: number; draw: number }) {
   const total = Math.max(1, w + l + d);
+  /* start at zero so the segments sweep to their real W/D/L proportions */
+  const [grown, setGrown] = useState(false);
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => setGrown(true));
+    return () => cancelAnimationFrame(raf);
+  }, []);
+  const seg = (v: number) => ({
+    width: grown ? `${(v / total) * 100}%` : "0%",
+  });
   return (
     <div>
       <div className="flex h-2 overflow-hidden border border-white/10">
-        <div className="bg-wx-green/80" style={{ width: `${(w / total) * 100}%` }} />
-        <div className="bg-white/20" style={{ width: `${(d / total) * 100}%` }} />
-        <div className="bg-wx-red/70" style={{ width: `${(l / total) * 100}%` }} />
+        <div className="bg-wx-green/80 transition-[width] duration-700 ease-out" style={seg(w)} />
+        <div className="bg-white/20 transition-[width] duration-700 ease-out" style={seg(d)} />
+        <div className="bg-wx-red/70 transition-[width] duration-700 ease-out" style={seg(l)} />
       </div>
       <div className="mt-1.5 flex justify-between font-mono text-[10px] text-wx-dim tabular-nums">
         <span className="text-wx-green">{w}W</span>
@@ -123,12 +134,10 @@ function Trail({ points }: { points: { t: number; rating: number }[] }) {
 
 /* ── replay board ────────────────────────────────────────── */
 function BoardView({
-  startBoard,
   board,
   lastMove,
   flipped,
 }: {
-  startBoard: Board;
   board: Board;
   lastMove: { from: number; to: number } | null;
   flipped: boolean;
@@ -227,11 +236,7 @@ function Replay({ game, onExit }: { game: ChessGame; onExit: () => void }) {
     game.myColor === "white" ? game.black.name : game.white.name;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="space-y-4"
-    >
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <SystemLabel className="text-wx-amber">GAME REPLAY</SystemLabel>
@@ -252,7 +257,6 @@ function Replay({ game, onExit }: { game: ChessGame; onExit: () => void }) {
       </div>
 
       <BoardView
-        startBoard={fenToBoard(initialFen)}
         board={board}
         lastMove={last ? { from: last.from, to: last.to } : null}
         flipped={flipped}
@@ -323,7 +327,7 @@ function Replay({ game, onExit }: { game: ChessGame; onExit: () => void }) {
           REPLAY STREAM TRUNCATED AT {moves.length} PLIES — SOURCE PGN IRREGULARITY
         </div>
       )}
-    </motion.div>
+    </div>
   );
 }
 
@@ -351,7 +355,7 @@ export function ChessArena() {
       <div className="space-y-6">
         {chess ? (
           <>
-            <div className="flex items-center justify-between">
+            <motion.div variants={fadeUp} className="flex items-center justify-between">
               <div>
                 <div className="font-sans text-lg font-semibold tracking-[0.2em]">
                   {chess.username.toUpperCase()}
@@ -365,9 +369,9 @@ export function ChessArena() {
                 state={chess.isOnline ? "live" : "offline"}
                 label={chess.isOnline ? "ON CHESS.COM" : "OFF BOARD"}
               />
-            </div>
+            </motion.div>
 
-            <div>
+            <motion.div variants={fadeUp}>
               <SectionTitle>RATING PILLARS</SectionTitle>
               <div
                 className="flex justify-around items-end"
@@ -378,126 +382,132 @@ export function ChessArena() {
                 <RatingPillar label="BULLET" rating={chess.stats.chess_bullet?.rating} best={chess.stats.chess_bullet?.best} max={maxRating} />
                 <RatingPillar label="DAILY" rating={chess.stats.chess_daily?.rating} best={chess.stats.chess_daily?.best} max={maxRating} />
               </div>
-            </div>
+            </motion.div>
 
             {chess.stats.chess_rapid?.record && (
-              <div>
+              <motion.div variants={fadeUp}>
                 <SectionTitle>RECORD — RAPID</SectionTitle>
                 <RecordBar {...chess.stats.chess_rapid.record} />
-              </div>
+              </motion.div>
             )}
 
-            <div>
+            <motion.div variants={fadeUp}>
               <SectionTitle>RATING TRAIL — REAL GAME HISTORY</SectionTitle>
               <Trail points={chess.ratingTrail} />
               <div className="font-mono text-[9.5px] text-wx-dim/60 tracking-wider mt-1">
                 DERIVED FROM PUBLIC ARCHIVED GAMES — NOTHING SIMULATED
               </div>
-            </div>
+            </motion.div>
 
-            {replaying ? (
-              <Replay game={replaying} onExit={() => setReplaying(null)} />
-            ) : (
-              <div>
-                <SectionTitle right={<LiveIndicator state={health.state} />}>
-                  RECENT ENCOUNTERS
-                </SectionTitle>
-                <div className="space-y-2">
-                  {chess.recentGames.length === 0 && (
-                    <div className="font-mono text-[10px] text-wx-dim py-4 text-center">
-                      NO RECENT PUBLIC GAMES FOUND IN ARCHIVES
-                    </div>
-                  )}
-                  {chess.recentGames.map((g) => {
-                    const opp = g.myColor === "white" ? g.black : g.white;
-                    return (
-                      <div
-                        key={g.url}
-                        className="border border-white/8 hover:border-wx-amber/40 bg-white/[0.015] px-3.5 py-3 clip-panel transition-colors"
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span
-                                className="font-mono text-[10px] px-1.5 py-0.5 border clip-tag"
-                                style={{
-                                  color:
-                                    g.myResult === "win"
-                                      ? "var(--wx-green)"
-                                      : g.myResult === "loss"
-                                        ? "var(--wx-red)"
-                                        : "var(--wx-dim)",
-                                  borderColor:
-                                    g.myResult === "win"
-                                      ? "#3ddc9744"
-                                      : g.myResult === "loss"
-                                        ? "#ff547044"
-                                        : "#ffffff22",
+            <motion.div variants={fadeUp}>
+              <AnimatePresence mode="wait" initial={false}>
+                {replaying ? (
+                  <motion.div
+                    key="replay"
+                    initial={{ opacity: 0, y: 14 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.3, ease: EASE_EXPO }}
+                  >
+                    <Replay game={replaying} onExit={() => setReplaying(null)} />
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="encounters"
+                    initial={{ opacity: 0, y: 14 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.3, ease: EASE_EXPO }}
+                  >
+                    <SectionTitle right={<LiveIndicator state={health.state} />}>
+                      RECENT ENCOUNTERS
+                    </SectionTitle>
+                    <div className="space-y-2">
+                      {chess.recentGames.length === 0 && (
+                        <div className="font-mono text-[10px] text-wx-dim py-4 text-center">
+                          NO RECENT PUBLIC GAMES FOUND IN ARCHIVES
+                        </div>
+                      )}
+                      {chess.recentGames.map((g) => {
+                        const opp = g.myColor === "white" ? g.black : g.white;
+                        const resultColor =
+                          g.myResult === "win"
+                            ? "#3ddc97"
+                            : g.myResult === "loss"
+                              ? "#ff5470"
+                              : undefined;
+                        return (
+                          <div
+                            key={g.url}
+                            className="border border-white/8 hover:border-wx-amber/40 bg-white/[0.015] px-3.5 py-3 clip-panel transition-colors"
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <Chip color={resultColor}>
+                                    {g.myResult?.toUpperCase() ?? "?"}
+                                  </Chip>
+                                  <span className="font-mono text-[11px] text-foreground/80 truncate">
+                                    vs {opp.name}
+                                  </span>
+                                  <span className="font-mono text-[10px] text-wx-dim">
+                                    ({opp.rating})
+                                  </span>
+                                </div>
+                                <div className="font-mono text-[10px] text-wx-dim mt-1 tracking-wider">
+                                  {g.time_class.toUpperCase()} · {g.end_reason.replace(/_/g, " ").toUpperCase()} ·{" "}
+                                  {new Date(g.endTime).toLocaleDateString(undefined, {
+                                    month: "short",
+                                    day: "numeric",
+                                  })}
+                                  {g.myColor === "black" ? " · PLAYED BLACK" : ""}
+                                </div>
+                              </div>
+                              <button
+                                onClick={() => {
+                                  playSound("click");
+                                  setReplaying(g);
                                 }}
+                                className="shrink-0 font-mono text-[10px] tracking-[0.2em] text-wx-amber border border-wx-amber/40 hover:bg-wx-amber/10 px-2.5 py-1.5 clip-btn transition-colors"
                               >
-                                {g.myResult?.toUpperCase() ?? "?"}
-                              </span>
-                              <span className="font-mono text-[11px] text-foreground/80 truncate">
-                                vs {opp.name}
-                              </span>
-                              <span className="font-mono text-[10px] text-wx-dim">
-                                ({opp.rating})
-                              </span>
-                            </div>
-                            <div className="font-mono text-[10px] text-wx-dim mt-1 tracking-wider">
-                              {g.time_class.toUpperCase()} · {g.end_reason.replace(/_/g, " ").toUpperCase()} ·{" "}
-                              {new Date(g.endTime).toLocaleDateString(undefined, {
-                                month: "short",
-                                day: "numeric",
-                              })}
-                              {g.myColor === "black" ? " · PLAYED BLACK" : ""}
+                                WATCH GAME
+                              </button>
                             </div>
                           </div>
-                          <button
-                            onClick={() => {
-                              playSound("click");
-                              setReplaying(g);
-                            }}
-                            className="shrink-0 font-mono text-[10px] tracking-[0.2em] text-wx-amber border border-wx-amber/40 hover:bg-wx-amber/10 px-2.5 py-1.5 clip-btn transition-colors"
-                          >
-                            WATCH GAME
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+                        );
+                      })}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
 
-            <a
+            <motion.a
+              variants={fadeUp}
               href={chess.url}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-block font-mono text-[10px] tracking-[0.25em] text-wx-amber border border-wx-amber/40 px-3 py-1.5 clip-btn hover:bg-wx-amber/10 transition-colors"
             >
               OPEN FULL PROFILE →
-            </a>
+            </motion.a>
           </>
         ) : (
-          <div className="space-y-4 py-8 text-center">
-            <div className="font-mono text-[10px] tracking-[0.3em] text-wx-amber">
-              {health.state === "connecting" ? "ENTERING THE CHAMBER..." : "CONNECTION INTERRUPTED"}
-            </div>
-            <p className="text-[11px] text-wx-dim leading-relaxed">
-              {health.state === "connecting"
-                ? "Ratings materializing from the public Chess.com archive."
-                : "The chamber is sealed. Last known state preserved."}
-            </p>
-            <LiveIndicator state={health.state === "connecting" ? "connecting" : "degraded"} />
-          </div>
+          <motion.div variants={fadeUp}>
+            <OfflineState
+              connectingTitle="ENTERING THE CHAMBER..."
+              connectingNote="Ratings materializing from the public Chess.com archive."
+              interruptedNote="The chamber is sealed. Last known state preserved."
+              state={health.state === "connecting" ? "connecting" : "degraded"}
+            />
+          </motion.div>
         )}
 
-        <div className="flex flex-wrap gap-2">
+        <motion.div variants={fadeUp} className="flex flex-wrap gap-2">
           <Chip color="#ffc857">CHESS.COM PUBAPI</Chip>
           <Chip>{IDENTITY.accounts.chess.username}</Chip>
           <Chip>READ-ONLY · PUBLIC</Chip>
-        </div>
+        </motion.div>
       </div>
     </RegionPanelShell>
   );

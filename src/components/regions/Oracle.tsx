@@ -1,11 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { useWorld, derivePresenceLine } from "@/lib/world/store";
 import { useGame } from "@/lib/game/store";
 import { playSound } from "@/lib/audio/sound";
 import { Chip, LiveIndicator, SectionTitle, SystemLabel } from "@/components/ui/holo/primitives";
+import { EASE_EXPO, SPRING_HUD, fadeUp } from "@/lib/world/motion";
+import { streamOracleDeltas } from "@/lib/world/sse";
 
 /* ═══════════════════════════════════════════════════════════
    ORACLE — neural link. Talk to the world's mind.
@@ -151,38 +153,17 @@ export function Oracle() {
         }
 
         setState("live");
-        const reader = res.body!.getReader();
-        const decoder = new TextDecoder();
         let acc = "";
         setMessages((m) => [...m, { role: "oracle", text: "" }]);
 
-        let buf = "";
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buf += decoder.decode(value, { stream: true });
-          const lines = buf.split("\n");
-          buf = lines.pop() ?? "";
-          for (const line of lines) {
-            if (!line.startsWith("data:")) continue;
-            const payload = line.slice(5).trim();
-            if (payload === "[DONE]") continue;
-            try {
-              const j = JSON.parse(payload);
-              const delta = j.choices?.[0]?.delta?.content;
-              if (typeof delta === "string" && delta) {
-                acc += delta;
-                setMessages((m) => {
-                  const next = [...m];
-                  next[next.length - 1] = { role: "oracle", text: acc };
-                  return next;
-                });
-                if (acc.length % 18 === 0) playSound("key");
-              }
-            } catch {
-              /* partial frame */
-            }
-          }
+        for await (const delta of streamOracleDeltas(res)) {
+          acc += delta;
+          setMessages((m) => {
+            const next = [...m];
+            next[next.length - 1] = { role: "oracle", text: acc };
+            return next;
+          });
+          if (acc.length % 18 === 0) playSound("key");
         }
         discover("core-oracle");
         unlock("neural-whisperer");
@@ -216,22 +197,25 @@ export function Oracle() {
 
   return (
     <div className="space-y-3">
-      <SectionTitle
-        right={
-          state === "unknown" ? (
-            <LiveIndicator state="connecting" label="LINKING" />
-          ) : sealed ? (
-            <LiveIndicator state="offline" label={state === "key_rejected" ? "KEY REJECTED" : "SEALED"} />
-          ) : (
-            <LiveIndicator state="live" label="NEURAL LINK" />
-          )
-        }
-      >
-        NEURAL LINK — SPEAK TO THE ORACLE
-      </SectionTitle>
+      <motion.div variants={fadeUp}>
+        <SectionTitle
+          right={
+            state === "unknown" ? (
+              <LiveIndicator state="connecting" label="LINKING" />
+            ) : sealed ? (
+              <LiveIndicator state="offline" label={state === "key_rejected" ? "KEY REJECTED" : "SEALED"} />
+            ) : (
+              <LiveIndicator state="live" label="NEURAL LINK" />
+            )
+          }
+        >
+          NEURAL LINK — SPEAK TO THE ORACLE
+        </SectionTitle>
+      </motion.div>
 
       {/* transcript */}
-      <div
+      <motion.div
+        variants={fadeUp}
         ref={scrollRef}
         className="h-56 sm:h-64 overflow-y-auto wx-scroll border border-white/10 bg-black/50 px-3.5 py-3 space-y-3"
         aria-live="polite"
@@ -290,37 +274,46 @@ export function Oracle() {
             ◈ THINKING...
           </div>
         )}
-      </div>
+      </motion.div>
 
-      {/* suggestions */}
-      {messages.length === 0 && !sealed && (
-        <div className="flex flex-wrap gap-1.5">
-          {SUGGESTIONS.map((s) => (
-            <button
-              key={s}
-              onClick={() => ask(s)}
-              disabled={streaming}
-              className="font-mono text-[9.5px] tracking-wider text-wx-dim border border-white/12 hover:border-wx-cyan/50 hover:text-white px-2.5 py-1.5 clip-tag transition-colors disabled:opacity-40"
-            >
-              {s.toUpperCase()}
-            </button>
-          ))}
-        </div>
-      )}
+      {/* suggestions — dissolve once the oracle answers */}
+      <AnimatePresence>
+        {messages.length === 0 && !sealed && (
+          <motion.div
+            key="suggestions"
+            variants={fadeUp}
+            exit={{ opacity: 0, y: -6, transition: { duration: 0.25, ease: EASE_EXPO } }}
+            className="flex flex-wrap gap-1.5"
+          >
+            {SUGGESTIONS.map((s) => (
+              <button
+                key={s}
+                onClick={() => ask(s)}
+                disabled={streaming}
+                className="font-mono text-[9.5px] tracking-wider text-wx-dim border border-white/12 hover:border-wx-cyan/50 hover:text-white px-2.5 py-1.5 clip-tag transition-colors disabled:opacity-40"
+              >
+                {s.toUpperCase()}
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* narrate button */}
       {!sealed && (
-        <button
+        <motion.button
+          variants={fadeUp}
           onClick={narrate}
           disabled={streaming}
           className="w-full font-mono text-[10px] tracking-[0.25em] text-wx-violet border border-wx-violet/40 hover:bg-wx-violet/10 px-3 py-2.5 clip-btn transition-colors disabled:opacity-40"
         >
           ⟡ NARRATE LIVE WORLD STATE
-        </button>
+        </motion.button>
       )}
 
       {/* input */}
-      <form
+      <motion.form
+        variants={fadeUp}
         className="flex gap-2"
         onSubmit={(e) => {
           e.preventDefault();
@@ -343,17 +336,24 @@ export function Oracle() {
         >
           {streaming ? "..." : "ASK"}
         </button>
-      </form>
+      </motion.form>
 
       {retryNote && (
-        <div className="font-mono text-[10px] text-wx-amber text-center">{retryNote}</div>
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={SPRING_HUD}
+          className="font-mono text-[10px] text-wx-amber text-center"
+        >
+          {retryNote}
+        </motion.div>
       )}
 
-      <div className="flex flex-wrap gap-2 pt-1">
+      <motion.div variants={fadeUp} className="flex flex-wrap gap-2 pt-1">
         <Chip color="#55e6ff">GROQ · SERVER-ONLY KEY</Chip>
         <Chip>RATE-LIMITED 6/MIN · 40/DAY</Chip>
         <Chip>PUBLIC IDENTITY ONLY</Chip>
-      </div>
+      </motion.div>
     </div>
   );
 }

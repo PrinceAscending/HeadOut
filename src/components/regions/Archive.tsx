@@ -5,7 +5,8 @@ import { motion } from "framer-motion";
 import { RegionPanelShell } from "./RegionPanelShell";
 import { useGame } from "@/lib/game/store";
 import { playSound } from "@/lib/audio/sound";
-import { Chip, SectionTitle, SystemLabel } from "@/components/ui/holo/primitives";
+import { Chip, MetricDisplay, SectionTitle, SystemLabel } from "@/components/ui/holo/primitives";
+import { fadeUp } from "@/lib/world/motion";
 import { useWorld } from "@/lib/world/store";
 import { DISCOVERIES, ACHIEVEMENTS } from "@/lib/game/catalog";
 
@@ -41,7 +42,10 @@ function SealFragment() {
   const [cracked, setCracked] = useState(false);
   const discover = useGame((s) => s.discover);
   return (
-    <div className="relative border border-white/8 bg-black/40 p-4 clip-panel overflow-hidden">
+    <motion.div
+      variants={fadeUp}
+      className="relative border border-white/8 bg-black/40 p-4 clip-panel overflow-hidden"
+    >
       <SystemLabel>RECOVERED FRAGMENT — INTEGRITY 61%</SystemLabel>
       <p className="mt-3 font-mono text-[11px] leading-relaxed text-foreground/40 tracking-wider">
         ...archive notes recovered from a corrupted sector. most of the text is
@@ -71,7 +75,7 @@ function SealFragment() {
           <span className="opacity-60">[ READ THE LINE ]</span>
         )}
       </button>
-    </div>
+    </motion.div>
   );
 }
 
@@ -92,7 +96,7 @@ export function Archive() {
   return (
     <RegionPanelShell regionId="archive">
       <div className="space-y-6">
-        <div>
+        <motion.div variants={fadeUp}>
           <SectionTitle>MEMORY TIMELINE</SectionTitle>
           <div className="relative pl-5 space-y-5">
             <span
@@ -100,7 +104,7 @@ export function Archive() {
               aria-hidden
             />
             {TIMELINE.map((t, i) => (
-              <div key={t.title} className="relative">
+              <motion.div key={t.title} variants={fadeUp} className="relative">
                 <span
                   className="absolute -left-5 top-1 w-[9px] h-[9px] border bg-[#04040a]"
                   style={{ borderColor: i === TIMELINE.length - 1 ? "var(--wx-cyan)" : "rgba(255,255,255,0.25)" }}
@@ -117,7 +121,7 @@ export function Archive() {
                 <p className="mt-1.5 text-[12px] leading-relaxed text-foreground/50 font-light">
                   {t.body}
                 </p>
-              </div>
+              </motion.div>
             ))}
           </div>
           {!readAll && (
@@ -131,40 +135,52 @@ export function Archive() {
               [ MARK TIMELINE AS READ ]
             </button>
           )}
-        </div>
+        </motion.div>
 
         <SealFragment />
 
-        <div>
+        <motion.div variants={fadeUp}>
           <SectionTitle>VISITOR RECORD</SectionTitle>
           <div className="grid grid-cols-3 gap-2 text-center">
-            <div className="border border-white/8 py-3 clip-panel">
-              <div className="font-sans text-xl font-semibold tabular-nums">
-                {visited.length}<span className="text-wx-dim text-sm">/10</span>
-              </div>
-              <div className="font-mono text-[9.5px] tracking-[0.25em] text-wx-dim mt-1">REGIONS</div>
-            </div>
-            <div className="border border-white/8 py-3 clip-panel">
-              <div className="font-sans text-xl font-semibold tabular-nums">
-                {discoveries.length}<span className="text-wx-dim text-sm">/{DISCOVERIES.length}</span>
-              </div>
-              <div className="font-mono text-[9.5px] tracking-[0.25em] text-wx-dim mt-1">DISCOVERIES</div>
-            </div>
-            <div className="border border-white/8 py-3 clip-panel">
-              <div className="font-sans text-xl font-semibold tabular-nums">
-                {achievements.length}<span className="text-wx-dim text-sm">/{ACHIEVEMENTS.length}</span>
-              </div>
-              <div className="font-mono text-[9.5px] tracking-[0.25em] text-wx-dim mt-1">ACHIEVEMENTS</div>
-            </div>
+            <MetricDisplay
+              className="border border-white/8 py-3 clip-panel"
+              label="REGIONS"
+              value={
+                <>
+                  {visited.length}
+                  <span className="text-wx-dim text-sm">/10</span>
+                </>
+              }
+            />
+            <MetricDisplay
+              className="border border-white/8 py-3 clip-panel"
+              label="DISCOVERIES"
+              value={
+                <>
+                  {discoveries.length}
+                  <span className="text-wx-dim text-sm">/{DISCOVERIES.length}</span>
+                </>
+              }
+            />
+            <MetricDisplay
+              className="border border-white/8 py-3 clip-panel"
+              label="ACHIEVEMENTS"
+              value={
+                <>
+                  {achievements.length}
+                  <span className="text-wx-dim text-sm">/{ACHIEVEMENTS.length}</span>
+                </>
+              }
+            />
           </div>
           <div className="mt-3 font-mono text-[9.5px] text-wx-dim/60 tracking-wider">
             PROGRESS LIVES IN YOUR BROWSER ONLY — NOTHING IS UPLOADED, NOTHING
             TRACKED SERVER-SIDE.
           </div>
-        </div>
+        </motion.div>
 
         {(github || chess) && (
-          <div>
+          <motion.div variants={fadeUp}>
             <SectionTitle>ARCHIVED SYSTEMS</SectionTitle>
             <div className="space-y-1.5 font-mono text-[10px]">
               {github && (
@@ -184,10 +200,10 @@ export function Archive() {
                 </div>
               )}
             </div>
-          </div>
+          </motion.div>
         )}
 
-        <div>
+        <motion.div variants={fadeUp}>
           <SectionTitle>PRIVACY / DATA CHARTER</SectionTitle>
           <ul className="space-y-2 text-[11px] leading-relaxed text-foreground/50 font-light list-none">
             <li>— Every signal on this world is PUBLIC data: Discord presence via Lanyard, GitHub repositories, Chess.com statistics, Spotify status when shared.</li>
@@ -195,12 +211,12 @@ export function Archive() {
             <li>— No private messages, private repositories, emails, phone numbers or precise locations are — or can be — displayed.</li>
             <li>— Your exploration progress is stored locally in your browser and never transmitted.</li>
           </ul>
-        </div>
+        </motion.div>
 
-        <div className="flex flex-wrap gap-2">
+        <motion.div variants={fadeUp} className="flex flex-wrap gap-2">
           <Chip>LOCAL PROGRESS ONLY</Chip>
           <Chip>PUBLIC APIs ONLY</Chip>
-        </div>
+        </motion.div>
       </div>
     </RegionPanelShell>
   );

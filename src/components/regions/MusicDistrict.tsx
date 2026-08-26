@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { RegionPanelShell } from "./RegionPanelShell";
 import { useWorld } from "@/lib/world/store";
 import { useGame } from "@/lib/game/store";
 import { playSound } from "@/lib/audio/sound";
 import { Chip, LiveIndicator, SectionTitle, SystemLabel } from "@/components/ui/holo/primitives";
+import { fadeUp } from "@/lib/world/motion";
 
 /* ═══════════════════════════════════════════════════════════
    Music District — reacts to whatever is actually playing.
@@ -14,35 +15,38 @@ import { Chip, LiveIndicator, SectionTitle, SystemLabel } from "@/components/ui/
    configured. Never fabricated.
    ═══════════════════════════════════════════════════════════ */
 
+/* drawn once per session so offline/online flips and track changes
+   never re-randomize the waveform silhouette */
+const BAR_LEVELS = Array.from({ length: 28 }, () => 0.2 + Math.random() * 0.8);
+
 function Waveform({ playing, color }: { playing: boolean; color: string }) {
-  const bars = useMemo(() => Array.from({ length: 28 }, () => 0.2 + Math.random() * 0.8), []);
-  if (playing) {
-    return (
-      <div className="flex items-end gap-[3px] h-10" aria-hidden>
-        {bars.map((b, i) => (
-          <motion.span
-            key={i}
-            className="w-[3px]"
-            style={{ background: color, boxShadow: `0 0 8px ${color}88` }}
-            animate={{ height: [`${b * 18}%`, `${b * 100}%`, `${b * 30}%`, `${b * 85}%`, `${b * 18}%`] }}
-            transition={{
-              duration: 1.6 + (i % 5) * 0.3,
-              repeat: Infinity,
-              ease: "easeInOut",
-              delay: i * 0.04,
-            }}
-          />
-        ))}
-      </div>
-    );
-  }
+  /* compositor-only: bars keep a fixed height and pulse via scaleY */
   return (
     <div className="flex items-end gap-[3px] h-10" aria-hidden>
-      {bars.map((b, i) => (
-        <span
+      {BAR_LEVELS.map((b, i) => (
+        <motion.span
           key={i}
-          className="w-[3px] transition-all"
-          style={{ height: `${b * 22}%`, background: "rgba(160,190,220,0.16)" }}
+          className="w-[3px] h-full"
+          style={{
+            background: playing ? color : "rgba(160,190,220,0.16)",
+            boxShadow: playing ? `0 0 8px ${color}88` : undefined,
+            transformOrigin: "bottom",
+          }}
+          animate={
+            playing
+              ? { scaleY: [b * 0.18, b, b * 0.3, b * 0.85, b * 0.18] }
+              : { scaleY: b * 0.22 }
+          }
+          transition={
+            playing
+              ? {
+                  duration: 1.6 + (i % 5) * 0.3,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  delay: i * 0.04,
+                }
+              : { duration: 0.8, ease: "easeInOut" }
+          }
         />
       ))}
     </div>
@@ -73,12 +77,15 @@ function NowPlaying() {
       discover("music-now");
       unlock("music-detector");
     }
-     
+
   }, [playing]);
 
   if (!playing || !spotify) {
     return (
-      <div className="border border-white/8 bg-white/[0.015] p-5 clip-panel text-center">
+      <motion.div
+        variants={fadeUp}
+        className="border border-white/8 bg-white/[0.015] p-5 clip-panel text-center"
+      >
         <Waveform playing={false} color="#3ddc97" />
         <div className="mt-4 font-mono text-[10px] tracking-[0.3em] text-wx-dim">
           NO LIVE FREQUENCY
@@ -90,7 +97,7 @@ function NowPlaying() {
         <div className="mt-3">
           <LiveIndicator state="offline" label="LAST KNOWN — SILENT" />
         </div>
-      </div>
+      </motion.div>
     );
   }
 
@@ -98,12 +105,10 @@ function NowPlaying() {
   const end = spotify.timestamps.end;
   const total = Math.max(1, end - start);
   const elapsed = Math.min(Math.max(0, now - start), total);
-  const pct = (elapsed / total) * 100;
 
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.98 }}
-      animate={{ opacity: 1, scale: 1 }}
+      variants={fadeUp}
       className="relative border border-wx-green/35 bg-wx-green/[0.03] p-5 clip-panel overflow-hidden"
     >
       {/* art aura */}
@@ -146,10 +151,11 @@ function NowPlaying() {
           <span>{fmt(total)}</span>
         </div>
         <div className="h-[3px] bg-white/8 mt-1 overflow-hidden">
+          {/* compositor-only: scaleX instead of width */}
           <div
-            className="h-full transition-[width] duration-1000 ease-linear"
+            className="h-full w-full origin-left transition-transform duration-1000 ease-linear"
             style={{
-              width: `${pct}%`,
+              transform: `scaleX(${elapsed / total})`,
               background: "linear-gradient(90deg, #3ddc9788, #3ddc97)",
               boxShadow: "0 0 10px #3ddc9766",
             }}
@@ -165,7 +171,7 @@ function SaffronSignal() {
   const [found, setFound] = useState(false);
   const discover = useGame((s) => s.discover);
   return (
-    <div className="relative">
+    <motion.div variants={fadeUp} className="relative">
       <button
         onClick={() => {
           if (!found) {
@@ -179,22 +185,25 @@ function SaffronSignal() {
       >
         स ा
       </button>
-      {found && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="border border-amber-400/30 bg-amber-400/[0.04] p-4 clip-panel"
-        >
-          <SystemLabel className="text-amber-300">SAFFRON SIGNAL DECODED</SystemLabel>
-          <p className="mt-2 text-[12px] leading-relaxed text-foreground/70 font-light">
-            Deep in the district&apos;s foundation, one voice is etched into the
-            architecture — <span className="text-amber-300">Kailash Kher</span>.
-            Sufi-trained, storm-throated. The district&apos;s warmest light
-            carries his frequency.
-          </p>
-        </motion.div>
-      )}
-    </div>
+      <AnimatePresence>
+        {found && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="border border-amber-400/30 bg-amber-400/[0.04] p-4 clip-panel"
+          >
+            <SystemLabel className="text-amber-300">SAFFRON SIGNAL DECODED</SystemLabel>
+            <p className="mt-2 text-[12px] leading-relaxed text-foreground/70 font-light">
+              Deep in the district&apos;s foundation, one voice is etched into the
+              architecture — <span className="text-amber-300">Kailash Kher</span>.
+              Sufi-trained, storm-throated. The district&apos;s warmest light
+              carries his frequency.
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }
 
@@ -210,7 +219,7 @@ export function MusicDistrict() {
         <SaffronSignal />
 
         {spotify?.configured && spotify.artist ? (
-          <div>
+          <motion.div variants={fadeUp}>
             <SectionTitle
               right={<LiveIndicator state="live" label="SPOTIFY LINK" />}
             >
@@ -247,7 +256,7 @@ export function MusicDistrict() {
                     {String(i + 1).padStart(2, "0")}
                   </span>
                   {t.art && (
-                     
+
                     <img src={t.art} alt="" className="w-8 h-8 object-cover" />
                   )}
                   <span className="flex-1 min-w-0 text-left">
@@ -264,9 +273,12 @@ export function MusicDistrict() {
                 </button>
               ))}
             </div>
-          </div>
+          </motion.div>
         ) : (
-          <div className="border border-white/8 bg-white/[0.015] p-4 clip-panel">
+          <motion.div
+            variants={fadeUp}
+            className="border border-white/8 bg-white/[0.015] p-4 clip-panel"
+          >
             <SectionTitle>ARCHIVE LINK</SectionTitle>
             <p className="text-[11px] text-foreground/50 leading-relaxed font-light">
               The district&apos;s long-term archive (top artists, saved history)
@@ -277,19 +289,22 @@ export function MusicDistrict() {
             <div className="mt-3">
               <LiveIndicator state="unconfigured" label="SPOTIFY API — NOT CONNECTED" />
             </div>
-          </div>
+          </motion.div>
         )}
 
-        <div className="font-mono text-[10px] leading-relaxed tracking-wider text-wx-dim/70 border-l border-wx-green/25 pl-3">
+        <motion.div
+          variants={fadeUp}
+          className="font-mono text-[10px] leading-relaxed tracking-wider text-wx-dim/70 border-l border-wx-green/25 pl-3"
+        >
           THIS DISTRICT SYNCS TO PLAYBACK PROGRESS. PARTICLES OUTSIDE THIS PANEL
           PULSE TO THE SAME CLOCK.
-        </div>
+        </motion.div>
 
-        <div className="flex flex-wrap gap-2">
+        <motion.div variants={fadeUp} className="flex flex-wrap gap-2">
           <Chip color="#3ddc97">LANYARD · REALTIME</Chip>
           <Chip>SPOTIFY OAUTH · SERVER-SIDE</Chip>
           <Chip>NO CLIENT CREDENTIALS</Chip>
-        </div>
+        </motion.div>
       </div>
     </RegionPanelShell>
   );

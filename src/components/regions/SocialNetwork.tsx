@@ -1,17 +1,22 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { RegionPanelShell } from "./RegionPanelShell";
 import { SOCIAL_NODES } from "@/lib/config/identity";
 import { useWorld } from "@/lib/world/store";
 import { useGame } from "@/lib/game/store";
 import { playSound } from "@/lib/audio/sound";
 import { Chip, LiveIndicator, SectionTitle } from "@/components/ui/holo/primitives";
+import { EASE_EXPO, fadeUp } from "@/lib/world/motion";
 
 /* ═══════════════════════════════════════════════════════════
    Social Network — platforms as a neural web, not link cards.
    Nodes drift; live nodes pulse. Signal lines carry packets.
    ═══════════════════════════════════════════════════════════ */
+
+/* short shared fade for conditional state swaps */
+const SWAP_FADE = { duration: 0.2, ease: EASE_EXPO };
 
 interface NodePos {
   id: string;
@@ -276,66 +281,83 @@ export function SocialNetwork() {
   return (
     <RegionPanelShell regionId="social">
       <div className="space-y-6">
-        <NeuralWeb nodes={SOCIAL_NODES} liveIds={liveIds} onPick={setPicked} />
+        <motion.div variants={fadeUp}>
+          <NeuralWeb nodes={SOCIAL_NODES} liveIds={liveIds} onPick={setPicked} />
+        </motion.div>
 
-        <div className="font-mono text-[10px] text-wx-dim/70 text-center tracking-[0.25em]">
+        <motion.div
+          variants={fadeUp}
+          className="font-mono text-[10px] text-wx-dim/70 text-center tracking-[0.25em]"
+        >
           GLOWING NODES = LIVE SIGNALS · CLICK TO INSPECT
-        </div>
+        </motion.div>
 
-        {node ? (
-          <div className="border border-wx-cyan/25 bg-wx-cyan/[0.03] p-4 clip-panel space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="font-sans text-sm font-semibold tracking-[0.2em]">
-                {node.platform}
-              </span>
-              <LiveIndicator
-                state={node.configured ? (node.live ? "live" : "offline") : "unconfigured"}
-                label={node.configured ? undefined : "NOT CONNECTED"}
-              />
-            </div>
-            {node.handle && (
-              <div className="font-mono text-[10px] text-foreground/60">@{node.handle}</div>
-            )}
-            {node.href ? (
-              <a
-                href={node.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-block font-mono text-[10px] tracking-[0.25em] text-wx-cyan border border-wx-cyan/40 px-3 py-1.5 clip-btn hover:bg-wx-cyan/10 transition-colors"
-              >
-                OPEN CHANNEL →
-              </a>
-            ) : (
-              <div className="font-mono text-[10px] text-wx-dim leading-relaxed">
-                INTEGRATION ARCHITECTURE READY — CHANNEL IDENTIFIER NOT
-                CONFIGURED. NOTHING IS FAKED UNTIL IT IS.
+        <AnimatePresence mode="wait" initial={false}>
+          {node ? (
+            <motion.div
+              key={`node-${node.id}`}
+              variants={fadeUp}
+              exit={{ opacity: 0, transition: SWAP_FADE }}
+              className="border border-wx-cyan/25 bg-wx-cyan/[0.03] p-4 clip-panel space-y-2"
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-sans text-sm font-semibold tracking-[0.2em]">
+                  {node.platform}
+                </span>
+                <LiveIndicator
+                  state={node.configured ? (node.live ? "live" : "offline") : "unconfigured"}
+                  label={node.configured ? undefined : "NOT CONNECTED"}
+                />
               </div>
-            )}
-          </div>
-        ) : (
-          <div className="border border-white/8 bg-white/[0.015] p-4 clip-panel">
-            <SectionTitle>SIGNAL MATRIX</SectionTitle>
-            <div className="space-y-2">
-              {SOCIAL_NODES.map((n) => (
-                <div key={n.id} className="flex items-center justify-between">
-                  <span className="font-mono text-[10px] tracking-[0.2em] text-foreground/60">
-                    {n.platform}
-                    {n.handle ? <span className="text-wx-dim"> — @{n.handle}</span> : null}
-                  </span>
-                  <LiveIndicator
-                    state={n.configured ? (n.live ? "live" : "offline") : "unconfigured"}
-                  />
+              {node.handle && (
+                <div className="font-mono text-[10px] text-foreground/60">@{node.handle}</div>
+              )}
+              {node.href ? (
+                <a
+                  href={node.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block font-mono text-[10px] tracking-[0.25em] text-wx-cyan border border-wx-cyan/40 px-3 py-1.5 clip-btn hover:bg-wx-cyan/10 transition-colors"
+                >
+                  OPEN CHANNEL →
+                </a>
+              ) : (
+                <div className="font-mono text-[10px] text-wx-dim leading-relaxed">
+                  INTEGRATION ARCHITECTURE READY — CHANNEL IDENTIFIER NOT
+                  CONFIGURED. NOTHING IS FAKED UNTIL IT IS.
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
+              )}
+            </motion.div>
+          ) : (
+            <motion.div
+              key="matrix"
+              variants={fadeUp}
+              exit={{ opacity: 0, transition: SWAP_FADE }}
+              className="border border-white/8 bg-white/[0.015] p-4 clip-panel"
+            >
+              <SectionTitle>SIGNAL MATRIX</SectionTitle>
+              <div className="space-y-2">
+                {SOCIAL_NODES.map((n) => (
+                  <div key={n.id} className="flex items-center justify-between">
+                    <span className="font-mono text-[10px] tracking-[0.2em] text-foreground/60">
+                      {n.platform}
+                      {n.handle ? <span className="text-wx-dim"> — @{n.handle}</span> : null}
+                    </span>
+                    <LiveIndicator
+                      state={n.configured ? (n.live ? "live" : "offline") : "unconfigured"}
+                    />
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-        <div className="flex flex-wrap gap-2">
+        <motion.div variants={fadeUp} className="flex flex-wrap gap-2">
           <Chip>NO PRIVATE DATA</Chip>
           <Chip>PUBLIC LINKS ONLY</Chip>
           <Chip>ADAPTERS: YT·REDDIT·X·TG — READY</Chip>
-        </div>
+        </motion.div>
       </div>
     </RegionPanelShell>
   );

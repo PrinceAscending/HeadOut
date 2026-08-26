@@ -9,6 +9,7 @@ import { useGame } from "@/lib/game/store";
 import { useWorld, derivePresenceLine, STATUS_COLOR } from "@/lib/world/store";
 import { playSound } from "@/lib/audio/sound";
 import { DataRow, LiveIndicator, SectionTitle } from "@/components/ui/holo/primitives";
+import { EASE_EXPO, fadeUp } from "@/lib/world/motion";
 
 /* ═══════════════════════════════════════════════════════════
    Central Core — Prince. A holographic identity sphere you
@@ -167,9 +168,7 @@ function TraitNode({
   const discover = useGame((s) => s.discover);
   return (
     <motion.button
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.15 + index * 0.12 }}
+      variants={fadeUp}
       onClick={() => {
         setOpen((o) => !o);
         playSound("click");
@@ -189,6 +188,7 @@ function TraitNode({
       <motion.div
         initial={false}
         animate={{ height: open ? "auto" : 0, opacity: open ? 1 : 0 }}
+        transition={{ duration: 0.4, ease: EASE_EXPO }}
         className="overflow-hidden"
       >
         <p className="pt-3 text-[12.5px] leading-relaxed text-foreground/65 font-light">
@@ -219,9 +219,11 @@ export function CentralCore() {
   return (
     <RegionPanelShell regionId="core">
       <div className="space-y-6">
-        <CoreOrb online={status !== "offline" && !!lanyard} />
+        <motion.div variants={fadeUp}>
+          <CoreOrb online={status !== "offline" && !!lanyard} />
+        </motion.div>
 
-        <div className="text-center">
+        <motion.div className="text-center" variants={fadeUp}>
           <div className="font-sans text-3xl font-bold tracking-[0.3em] text-white text-glow-soft">
             {IDENTITY.name}
           </div>
@@ -237,10 +239,10 @@ export function CentralCore() {
           <div className="mt-2">
             <LiveIndicator state={health.state} />
           </div>
-        </div>
+        </motion.div>
 
         {avatarUrl && (
-          <div className="flex justify-center">
+          <motion.div variants={fadeUp} className="flex justify-center">
             { }
             <img
               src={avatarUrl}
@@ -248,19 +250,19 @@ export function CentralCore() {
               className="w-14 h-14 rounded-full border border-wx-cyan/30"
               style={{ boxShadow: "0 0 24px rgba(85,230,255,0.25)" }}
             />
-          </div>
+          </motion.div>
         )}
 
-        <div>
+        <motion.div variants={fadeUp}>
           <SectionTitle>IDENTITY MATRIX</SectionTitle>
           <div className="space-y-2">
             {IDENTITY.traits.map((t, i) => (
               <TraitNode key={t.id} index={i} label={t.label} description={t.description} />
             ))}
           </div>
-        </div>
+        </motion.div>
 
-        <div>
+        <motion.div variants={fadeUp}>
           <SectionTitle>SIGNAL REGISTRY</SectionTitle>
           <div className="space-y-2.5">
             <DataRow k="IDENTITY" v="PRINCE — @PrinceAscending" />
@@ -275,14 +277,19 @@ export function CentralCore() {
               v={lanyard?.activities.find((a) => a.type === 4)?.state ?? "—"}
             />
           </div>
-        </div>
+        </motion.div>
 
-        <p className="font-mono text-[10px] leading-relaxed tracking-wider text-wx-dim/80 border-l border-wx-cyan/25 pl-3">
+        <motion.p
+          variants={fadeUp}
+          className="font-mono text-[10px] leading-relaxed tracking-wider text-wx-dim/80 border-l border-wx-cyan/25 pl-3"
+        >
           THIS CORE BRIGHTENS WITH LIVE PRESENCE. IF IT GLOWS, PRINCE IS SOMEWHERE
           IN THE SYSTEM RIGHT NOW.
-        </p>
+        </motion.p>
 
-        <Oracle />
+        <motion.div variants={fadeUp}>
+          <Oracle />
+        </motion.div>
       </div>
     </RegionPanelShell>
   );

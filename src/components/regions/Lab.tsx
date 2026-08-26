@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { RegionPanelShell } from "./RegionPanelShell";
 import { useGame } from "@/lib/game/store";
 import { playSound } from "@/lib/audio/sound";
 import { Chip, LiveIndicator, SectionTitle, SystemLabel } from "@/components/ui/holo/primitives";
+import { EASE_EXPO, fadeUp } from "@/lib/world/motion";
 
 /* ═══════════════════════════════════════════════════════════
    LAB — five experiments, each a small interactive machine.
@@ -313,15 +315,17 @@ export function Lab() {
   return (
     <RegionPanelShell regionId="lab">
       <div className="space-y-4">
-        <SystemLabel>
-          EXPERIMENTAL WING — {EXPERIMENTS.length} REGISTERED, {exp5Sealed ? "1 SEALED" : "ALL UNSEALED"}
-        </SystemLabel>
+        <motion.div variants={fadeUp}>
+          <SystemLabel>
+            EXPERIMENTAL WING — {EXPERIMENTS.length} REGISTERED, {exp5Sealed ? "1 SEALED" : "ALL UNSEALED"}
+          </SystemLabel>
+        </motion.div>
 
         {EXPERIMENTS.map((exp) => {
           const sealed = exp.id === "unknown" && exp5Sealed;
           const isOpen = open === exp.id;
           return (
-            <div key={exp.id} className="border border-white/8 bg-white/[0.015] clip-panel">
+            <motion.div key={exp.id} variants={fadeUp} className="border border-white/8 bg-white/[0.015] clip-panel">
               <button
                 onClick={() => {
                   playSound("click");
@@ -354,42 +358,56 @@ export function Lab() {
                   </span>
                 </span>
               </button>
-              {isOpen && !sealed && (
-                <div className="px-4 pb-4">
-                  <div className="font-mono text-[10px] text-wx-dim mb-2 tracking-wider">
-                    {exp.note.toUpperCase()}
-                  </div>
-                  {exp.id === "particles" && <ParticleField />}
-                  {exp.id === "gravity" && <GravityWell />}
-                  {exp.id === "voidterm" && <VoidTerminal />}
-                  {exp.id === "neural" && <NeuralMap />}
-                  {exp.id === "unknown" && (
-                    <div className="h-52 grid place-items-center border border-white/8 bg-black/70">
-                      <div className="text-center">
-                        <div className="font-mono text-[10px] text-wx-dim tracking-[0.3em] wx-animate-pulse">
-                          EXPERIMENT 005 UNSEALED
-                        </div>
-                        <div className="font-mono text-[10px] text-wx-dim/60 mt-2">
-                          it was watching the whole time
-                        </div>
+              <AnimatePresence>
+                {isOpen && !sealed && (
+                  <motion.div
+                    key="body"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.4, ease: EASE_EXPO }}
+                    className="overflow-hidden"
+                  >
+                    <div className="px-4 pb-4">
+                      <div className="font-mono text-[10px] text-wx-dim mb-2 tracking-wider">
+                        {exp.note.toUpperCase()}
                       </div>
+                      {exp.id === "particles" && <ParticleField />}
+                      {exp.id === "gravity" && <GravityWell />}
+                      {exp.id === "voidterm" && <VoidTerminal />}
+                      {exp.id === "neural" && <NeuralMap />}
+                      {exp.id === "unknown" && (
+                        <div className="h-52 grid place-items-center border border-white/8 bg-black/70">
+                          <div className="text-center">
+                            <div className="font-mono text-[10px] text-wx-dim tracking-[0.3em] wx-animate-pulse">
+                              EXPERIMENT 005 UNSEALED
+                            </div>
+                            <div className="font-mono text-[10px] text-wx-dim/60 mt-2">
+                              it was watching the whole time
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              )}
-            </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
           );
         })}
 
-        <div className="font-mono text-[10px] leading-relaxed tracking-wider text-wx-dim/70 border-l border-wx-violet/25 pl-3">
+        <motion.div
+          variants={fadeUp}
+          className="font-mono text-[10px] leading-relaxed tracking-wider text-wx-dim/70 border-l border-wx-violet/25 pl-3"
+        >
           THE LAB IS EXTENSIBLE BY DESIGN. NEW EXPERIMENTS SLOT INTO THE
           REGISTRY WITHOUT REDESIGNING THE WORLD.
-        </div>
+        </motion.div>
 
-        <div className="flex flex-wrap gap-2">
+        <motion.div variants={fadeUp} className="flex flex-wrap gap-2">
           <Chip color="#b78bff">5 EXPERIMENTS</Chip>
           <Chip>CANVAS-BASED · LIGHT</Chip>
-        </div>
+        </motion.div>
       </div>
     </RegionPanelShell>
   );

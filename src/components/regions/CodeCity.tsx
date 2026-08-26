@@ -1,11 +1,22 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { RegionPanelShell } from "./RegionPanelShell";
+import { OfflineState } from "./OfflineState";
 import { useWorld } from "@/lib/world/store";
 import { useGame } from "@/lib/game/store";
 import { playSound } from "@/lib/audio/sound";
-import { Chip, DataRow, LiveIndicator, SectionTitle, SystemLabel } from "@/components/ui/holo/primitives";
+import {
+  Bar,
+  Chip,
+  DataRow,
+  LiveIndicator,
+  MetricDisplay,
+  SectionTitle,
+  SystemLabel,
+} from "@/components/ui/holo/primitives";
+import { EASE_EXPO, fadeUp } from "@/lib/world/motion";
 import { secondsSince } from "@/lib/utils";
 import type { GitHubRepo } from "@/types";
 
@@ -46,7 +57,13 @@ function activityScore(r: GitHubRepo): number {
 }
 
 /* ── the skyline ─────────────────────────────────────────── */
-function Skyline({ repos }: { repos: GitHubRepo[] }) {
+function Skyline({
+  repos,
+  onWitness,
+}: {
+  repos: GitHubRepo[];
+  onWitness: () => void;
+}) {
   const ref = useRef<HTMLCanvasElement>(null);
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
 
@@ -175,6 +192,14 @@ function Skyline({ repos }: { repos: GitHubRepo[] }) {
           {repos[hoverIdx].name}
         </div>
       )}
+      {/* quiet beacon on the live grid — witnessed, not advertised */}
+      <button
+        onClick={onWitness}
+        className="absolute bottom-1.5 right-2 font-mono text-[9.5px] tracking-[0.5em] text-transparent hover:text-wx-violet/60 focus-visible:text-wx-violet/60 transition-colors"
+        aria-label="A lone beacon blinks atop the busiest structure"
+      >
+        GRID
+      </button>
     </div>
   );
 }
@@ -248,28 +273,23 @@ export function CodeCity() {
       <div className="space-y-6">
         {github ? (
           <>
-            <Skyline repos={repos.slice(0, 12)} />
+            <motion.div variants={fadeUp}>
+              <Skyline
+                repos={repos.slice(0, 12)}
+                onWitness={() => {
+                  playSound("secret");
+                  discover("code-activity");
+                }}
+              />
+            </motion.div>
 
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <div className="font-mono text-[10px] tracking-[0.25em] text-wx-dim">STRUCTURES</div>
-                <div className="font-sans text-2xl font-semibold tabular-nums">{github.public_repos}</div>
-              </div>
-              <div>
-                <div className="font-mono text-[10px] tracking-[0.25em] text-wx-dim">ACTIVE / 30D</div>
-                <div className="font-sans text-2xl font-semibold tabular-nums text-wx-green">
-                  {activeCount}
-                </div>
-              </div>
-              <div>
-                <div className="font-mono text-[10px] tracking-[0.25em] text-wx-dim">CITY AGE</div>
-                <div className="font-sans text-2xl font-semibold tabular-nums">
-                  {new Date(github.created_at).getFullYear()}
-                </div>
-              </div>
-            </div>
+            <motion.div className="grid grid-cols-3 gap-3" variants={fadeUp}>
+              <MetricDisplay label="STRUCTURES" value={github.public_repos} />
+              <MetricDisplay label="ACTIVE / 30D" value={activeCount} color="var(--wx-green)" />
+              <MetricDisplay label="CITY AGE" value={new Date(github.created_at).getFullYear()} />
+            </motion.div>
 
-            <div>
+            <motion.div variants={fadeUp}>
               <SectionTitle
                 right={
                   <LiveIndicator
@@ -297,63 +317,70 @@ export function CodeCity() {
                   />
                 ))}
               </div>
-            </div>
+            </motion.div>
 
-            {selected && (
-              <div className="border border-wx-violet/30 bg-wx-violet/[0.04] p-4 clip-panel space-y-2">
-                <div className="flex items-center justify-between">
-                  <SystemLabel>STRUCTURE FILE</SystemLabel>
-                  <button
-                    className="font-mono text-[10px] text-wx-dim hover:text-white"
-                    onClick={() => setSelected(null)}
-                  >
-                    [ CLOSE ]
-                  </button>
-                </div>
-                <DataRow k="NAME" v={selected.name} />
-                <DataRow k="STATUS" v={selected.archived ? "ARCHIVED" : daysSince(selected.pushedAt) <= 30 ? "ACTIVE" : "DORMANT"} />
-                <DataRow k="CREATED" v={new Date(selected.createdAt).toLocaleDateString()} />
-                <DataRow k="LAST PUSH" v={selected.pushedAt ? new Date(selected.pushedAt).toLocaleDateString() : "—"} />
-                <DataRow k="STARS" v={selected.stars} />
-                <DataRow k="FORKS" v={selected.forks} />
-                {selected.homepage && <DataRow k="HOMEPAGE" v={selected.homepage} />}
-                <a
-                  href={selected.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-block mt-2 font-mono text-[10px] tracking-[0.25em] text-wx-violet hover:text-white border border-wx-violet/40 px-3 py-1.5 clip-btn"
+            <AnimatePresence initial={false}>
+              {selected && (
+                <motion.div
+                  key="structure-file"
+                  initial={{ opacity: 0, y: 14 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 8 }}
+                  transition={{ duration: 0.35, ease: EASE_EXPO }}
+                  className="border border-wx-violet/30 bg-wx-violet/[0.04] p-4 clip-panel space-y-2"
                 >
-                  OPEN ON GITHUB →
-                </a>
-              </div>
-            )}
+                  <div className="flex items-center justify-between">
+                    <SystemLabel>STRUCTURE FILE</SystemLabel>
+                    <button
+                      className="font-mono text-[10px] text-wx-dim hover:text-white"
+                      onClick={() => setSelected(null)}
+                    >
+                      [ CLOSE ]
+                    </button>
+                  </div>
+                  <DataRow k="NAME" v={selected.name} />
+                  <DataRow k="STATUS" v={selected.archived ? "ARCHIVED" : daysSince(selected.pushedAt) <= 30 ? "ACTIVE" : "DORMANT"} />
+                  <DataRow k="CREATED" v={new Date(selected.createdAt).toLocaleDateString()} />
+                  <DataRow k="LAST PUSH" v={selected.pushedAt ? new Date(selected.pushedAt).toLocaleDateString() : "—"} />
+                  <DataRow k="STARS" v={selected.stars} />
+                  <DataRow k="FORKS" v={selected.forks} />
+                  {selected.homepage && <DataRow k="HOMEPAGE" v={selected.homepage} />}
+                  <a
+                    href={selected.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block mt-2 font-mono text-[10px] tracking-[0.25em] text-wx-violet hover:text-white border border-wx-violet/40 px-3 py-1.5 clip-btn"
+                  >
+                    OPEN ON GITHUB →
+                  </a>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {langDist.length > 0 && (
-              <div>
+              <motion.div variants={fadeUp}>
                 <SectionTitle>DIALECT DISTRIBUTION</SectionTitle>
                 <div className="space-y-2" onMouseEnter={() => discover("code-language")}>
                   {langDist.slice(0, 5).map(([lang, count]) => (
                     <div key={lang} className="flex items-center gap-3">
                       <span className="w-2 h-2 shrink-0" style={{ background: langColor(lang) }} />
                       <span className="font-mono text-[10px] text-foreground/70 w-24 truncate">{lang}</span>
-                      <div className="flex-1 h-[3px] bg-white/6">
-                        <div
-                          className="h-full"
-                          style={{
-                            width: `${(count / langDist[0][1]) * 100}%`,
-                            background: langColor(lang),
-                          }}
-                        />
-                      </div>
+                      <Bar
+                        value={count}
+                        max={langDist[0][1]}
+                        color={langColor(lang)}
+                        height={3}
+                        className="flex-1"
+                      />
                       <span className="font-mono text-[10px] text-wx-dim tabular-nums">{count}</span>
                     </div>
                   ))}
                 </div>
-              </div>
+              </motion.div>
             )}
 
             {github.events.length > 0 && (
-              <div>
+              <motion.div variants={fadeUp}>
                 <SectionTitle>ACTIVITY FEED</SectionTitle>
                 <div className="space-y-1.5 font-mono text-[10px]">
                   {github.events.slice(0, 6).map((e) => (
@@ -372,37 +399,25 @@ export function CodeCity() {
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
-
-            {activeCount > 0 && (
-              <button
-                className="hidden"
-                onClick={() => discover("code-activity")}
-                aria-hidden
-                tabIndex={-1}
-              />
+              </motion.div>
             )}
           </>
         ) : (
-          <div className="space-y-4 py-8 text-center">
-            <div className="font-mono text-[10px] tracking-[0.3em] text-wx-amber">
-              {health.state === "connecting" ? "CITY SYNC IN PROGRESS..." : "CONNECTION INTERRUPTED"}
-            </div>
-            <p className="text-[11px] text-wx-dim leading-relaxed">
-              {health.state === "connecting"
-                ? "Structures are materializing from live GitHub data."
-                : "The city went dark. Last known state is preserved. Live data returns when the signal does."}
-            </p>
-            <LiveIndicator state={health.state === "connecting" ? "connecting" : "degraded"} />
-          </div>
+          <motion.div variants={fadeUp}>
+            <OfflineState
+              connectingTitle="CITY SYNC IN PROGRESS..."
+              connectingNote="Structures are materializing from live GitHub data."
+              interruptedNote="The city went dark. Last known state is preserved. Live data returns when the signal does."
+              state={health.state === "connecting" ? "connecting" : "degraded"}
+            />
+          </motion.div>
         )}
 
-        <div className="flex flex-wrap gap-2">
+        <motion.div className="flex flex-wrap gap-2" variants={fadeUp}>
           <Chip>GITHUB API · PUBLIC</Chip>
           <Chip>NO PRIVATE DATA</Chip>
           <Chip>ADAPTER: /api/github</Chip>
-        </div>
+        </motion.div>
       </div>
     </RegionPanelShell>
   );

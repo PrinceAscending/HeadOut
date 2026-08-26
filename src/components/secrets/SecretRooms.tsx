@@ -22,17 +22,55 @@ function SecretShell({
   children,
   onExited,
 }: {
-  id: string;
+  /* rooms that are not one of the six hidden sectors (e.g. UNKNOWN)
+     omit id — no secret gets marked on their behalf */
+  id?: string;
   name: string;
   tagline: string;
   color: string;
   children: React.ReactNode;
   onExited: () => void;
 }) {
+  const cardRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
-    useGame.getState().findSecret(id as never);
+    if (id) useGame.getState().findSecret(id as never);
     playSound("secret");
   }, [id]);
+
+  /* focus into the room on entry, trap Tab, ESC to surface, restore on exit */
+  useEffect(() => {
+    const prevFocus = document.activeElement as HTMLElement | null;
+    cardRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        playSound("close");
+        onExited();
+        return;
+      }
+      if (e.key === "Tab" && cardRef.current) {
+        const focusables = cardRef.current.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        );
+        if (!focusables.length) return;
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        const outside = !cardRef.current.contains(document.activeElement);
+        const atEdge = e.shiftKey
+          ? document.activeElement === first
+          : document.activeElement === last;
+        if (outside || atEdge) {
+          e.preventDefault();
+          (e.shiftKey ? last : first).focus();
+        }
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      prevFocus?.focus();
+    };
+  }, [onExited]);
 
   return (
     <motion.div
@@ -46,10 +84,12 @@ function SecretShell({
       aria-label={name}
     >
       <motion.div
+        ref={cardRef}
+        tabIndex={-1}
         initial={{ y: 24, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.15 }}
-        className="relative glass-deep border border-white/10 clip-panel max-w-lg w-full p-5 sm:p-8 max-md:max-h-[88vh] max-md:overflow-y-auto wx-scroll"
+        className="relative glass-deep border border-white/10 clip-panel max-w-lg w-full p-5 sm:p-8 max-md:max-h-[88vh] max-md:overflow-y-auto wx-scroll outline-none"
       >
         <div
           className="absolute top-0 left-6 right-6 h-px"
@@ -399,7 +439,7 @@ function UnknownRoom({ onExited }: { onExited: () => void }) {
     return () => cancelAnimationFrame(raf);
   }, [resolved]);
   return (
-    <SecretShell id="void" name="UNKNOWN SIGNAL" tagline="SOURCE RESOLVED" color="#ffffff" onExited={onExited}>
+    <SecretShell name="UNKNOWN SIGNAL" tagline="SOURCE RESOLVED" color="#ffffff" onExited={onExited}>
       <div className="space-y-4">
         <canvas ref={canvasRef} className="w-full h-40 border border-white/10 bg-black/70" />
         <p className="text-[12.5px] leading-relaxed text-foreground/65 font-light">
