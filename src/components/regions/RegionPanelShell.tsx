@@ -86,10 +86,14 @@ export function RegionPanelShell({
     <AnimatePresence>
       {open && (
         <>
-          {/* dim backdrop (click to close) */}
+          {/* dim backdrop (click to close) — tinted by the region's
+              signal color for a depth cue toward the panel edge */}
           <motion.div
             key={`bd-${regionId}`}
-            className="fixed inset-0 z-[30] bg-black/45 backdrop-blur-[2px]"
+            className="fixed inset-0 z-[30] backdrop-blur-[2px]"
+            style={{
+              background: `radial-gradient(120% 100% at 100% 50%, ${def.color}12, transparent 55%), rgba(0,0,0,0.45)`,
+            }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -110,7 +114,7 @@ export function RegionPanelShell({
               "fixed z-[35] glass-deep border-l border-white/10 outline-none",
               "max-md:inset-x-0 max-md:bottom-0 max-md:top-auto max-md:max-h-[86vh] max-md:rounded-t-xl max-md:border-t max-md:border-l-0",
               "md:inset-y-0 md:right-0 md:w-[min(100vw,30rem)]",
-              "flex flex-col scanlines overflow-hidden",
+              "flex flex-col scanlines overflow-hidden wx-aura",
               width === "max-w-lg" ? "" : width
             )}
             initial={isMobile ? { y: "100%", opacity: 0.6 } : { x: "100%", opacity: 0.6 }}

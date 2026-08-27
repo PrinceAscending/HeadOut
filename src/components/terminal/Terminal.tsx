@@ -13,8 +13,8 @@ import { secondsSince } from "@/lib/utils";
 import type { TerminalLine } from "@/types";
 
 /* ═══════════════════════════════════════════════════════════
-   Terminal — direct access to the world. Dynamic responses,
-   hidden commands, no mercy.
+   Terminal — the command deck. Direct access to the world.
+   Dynamic responses, hidden commands, no mercy.
    ═══════════════════════════════════════════════════════════ */
 
 const PUBLIC_HELP = [
@@ -48,6 +48,23 @@ const L = (kind: TerminalLine["kind"], text: string): TerminalLine => ({
   text,
 });
 
+/* session uptime — ticks in isolation so the deck never re-renders for it */
+function SessionClock({ since }: { since: number }) {
+  const [, tick] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => tick((n) => n + 1), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const s = Math.max(0, Math.floor((Date.now() - since) / 1000));
+  const mm = String(Math.floor(s / 60)).padStart(2, "0");
+  const ss = String(s % 60).padStart(2, "0");
+  return (
+    <span className="font-mono text-[9.5px] tracking-[0.2em] text-wx-dim/80 tabular-nums">
+      SESSION {mm}:{ss}
+    </span>
+  );
+}
+
 export function Terminal({
   onGoto,
   onSecret,
@@ -71,7 +88,10 @@ export function Terminal({
   const [histIdx, setHistIdx] = useState(-1);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const deckRef = useRef<HTMLDivElement>(null);
+  const sessionStart = useWorld((s) => s.terminalOpenedAt);
   const game = useGame;
+  const commandsDiscovered = useGame((s) => s.commandsDiscovered);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -82,6 +102,44 @@ export function Terminal({
   useEffect(() => {
     if (open) setTimeout(() => inputRef.current?.focus(), 250);
   }, [open]);
+
+  /* focus management: ESC closes from anywhere, Tab stays in the deck.
+     capture phase so the terminal (top surface) decides before children. */
+  useEffect(() => {
+    if (!open) return;
+    const prevFocus = document.activeElement as HTMLElement | null;
+    const onKey = (e: KeyboardEvent) => {
+      /* the command palette sits above this deck — let it consume ESC */
+      if (useWorld.getState().paletteOpen) return;
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        setOpen(false);
+        playSound("close");
+        return;
+      }
+      if (e.key === "Tab" && deckRef.current) {
+        const focusables = deckRef.current.querySelectorAll<HTMLElement>(
+          "button:not([disabled]), input:not([disabled])"
+        );
+        if (!focusables.length) return;
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        const outside = !deckRef.current.contains(document.activeElement);
+        const atEdge = e.shiftKey
+          ? document.activeElement === first
+          : document.activeElement === last;
+        if (outside || atEdge) {
+          e.preventDefault();
+          (e.shiftKey ? last : first).focus();
+        }
+      }
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => {
+      window.removeEventListener("keydown", onKey, true);
+      prevFocus?.focus();
+    };
+  }, [open, setOpen]);
 
   const out = (...ls: TerminalLine[]) => setLines((prev) => [...prev, ...ls]);
 
@@ -365,6 +423,10 @@ export function Terminal({
           out(L("err", `no region matches "${target}"`));
           break;
         }
+        if (r.id === "terminal") {
+          out(L("out", "you are already at direct access. the world is listening."));
+          break;
+        }
         out(L("sys", `traveling to ${r.name}...`));
         onGoto(r.id);
         break;
@@ -506,43 +568,58 @@ export function Terminal({
     <AnimatePresence>
       {open && (
         <motion.div
-          initial={{ y: 60, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          exit={{ y: 60, opacity: 0 }}
-          transition={{ type: "spring", stiffness: 280, damping: 32 }}
-          className="fixed z-[40] bottom-0 left-1/2 -translate-x-1/2 w-[min(100vw,44rem)] max-md:left-0 max-md:right-0 max-md:translate-x-0 max-md:w-full glass-deep border border-white/12 border-b-0 scanlines pb-[env(safe-area-inset-bottom)]"
+          ref={deckRef}
+          initial={{ y: 56, opacity: 0, scale: 0.985 }}
+          animate={{ y: 0, opacity: 1, scale: 1 }}
+          exit={{ y: 56, opacity: 0, scale: 0.99 }}
+          transition={{ type: "spring", stiffness: 300, damping: 32 }}
+          className="fixed z-[40] bottom-0 left-1/2 -translate-x-1/2 w-[min(100vw,46rem)] max-md:left-0 max-md:right-0 max-md:translate-x-0 max-md:w-full glass-deep border border-white/12 border-b-0 wx-brackets wx-topbeam wx-aura scanlines pb-[env(safe-area-inset-bottom)]"
           role="dialog"
+          aria-modal="true"
           aria-label="Terminal"
         >
-          {/* title bar */}
-          <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/8">
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 bg-wx-green wx-animate-pulse" aria-hidden />
-              <span className="font-mono text-[10.5px] tracking-[0.25em] text-wx-dim">
-                TERMINAL — prince@world
+          {/* ── title bar ─────────────────────────────────── */}
+          <div className="flex items-center justify-between gap-3 pl-4 pr-2.5 py-2.5 border-b border-white/8">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className="relative flex w-2 h-2 shrink-0" aria-hidden>
+                <span className="absolute inset-0 bg-wx-green wx-animate-pulse" />
+                <span
+                  className="absolute inset-0 bg-wx-green rounded-full"
+                  style={{ boxShadow: "0 0 10px var(--wx-green)" }}
+                />
+              </span>
+              <span className="font-mono text-[10.5px] tracking-[0.25em] text-wx-dim truncate">
+                DIRECT ACCESS <span className="text-wx-cyan/60">{"//"}</span> prince@world
               </span>
             </div>
-            <button
-              onClick={() => {
-                setOpen(false);
-                playSound("close");
-              }}
-              className="font-mono text-[11px] text-wx-dim hover:text-white transition-colors px-2 py-1"
-              aria-label="Close terminal"
-            >
-              [ESC]
-            </button>
+            <div className="flex items-center gap-3 shrink-0">
+              <SessionClock since={sessionStart || Date.now()} />
+              <span className="w-px h-3.5 bg-white/10" aria-hidden />
+              <button
+                onClick={() => {
+                  setOpen(false);
+                  playSound("close");
+                }}
+                className="font-mono text-[10px] tracking-[0.14em] text-wx-dim hover:text-white border border-transparent hover:border-white/20 hover:bg-white/[0.06] px-2 py-1 transition-colors"
+                aria-label="Close terminal"
+              >
+                [ESC]
+              </button>
+            </div>
           </div>
 
-          {/* output */}
+          {/* ── output — the feed ─────────────────────────── */}
           <div
             ref={scrollRef}
-            className="h-56 max-md:h-64 sm:h-72 overflow-y-auto wx-scroll px-4 py-3 font-mono text-[11.5px] sm:text-[12px] leading-[1.75]"
+            className="wx-fade-y wx-grid-bg h-60 sm:h-[21rem] overflow-y-auto wx-scroll px-4 pt-4 pb-3 font-mono text-[11.5px] sm:text-[12px] leading-[1.75]"
             aria-live="polite"
           >
             {lines.map((l) => (
-              <div
+              <motion.div
                 key={l.id}
+                initial={{ opacity: 0.3, x: -2 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.16 }}
                 className={
                   l.kind === "cmd"
                     ? "text-white"
@@ -555,15 +632,19 @@ export function Terminal({
                           : "text-foreground/60"
                 }
               >
-                {l.kind === "cmd" ? <span className="text-wx-cyan/60">prince@world:~$ </span> : null}
+                {l.kind === "cmd" ? (
+                  <span className="text-wx-cyan/60">
+                    prince@world:~${" "}
+                  </span>
+                ) : null}
                 <span className="whitespace-pre-wrap">{l.text}</span>
-              </div>
+              </motion.div>
             ))}
           </div>
 
-          {/* input */}
+          {/* ── input row ─────────────────────────────────── */}
           <form
-            className="flex items-center gap-2 px-4 py-3 border-t border-white/8"
+            className="group flex items-center gap-2 px-4 py-3 border-t border-white/8 transition-colors focus-within:border-wx-cyan/25"
             onSubmit={(e) => {
               e.preventDefault();
               run(input);
@@ -593,8 +674,6 @@ export function Terminal({
                   const next = histIdx - 1;
                   setHistIdx(next);
                   setInput(next >= 0 ? history[next] ?? "" : "");
-                } else if (e.key === "Escape") {
-                  setOpen(false);
                 }
                 e.stopPropagation();
               }}
@@ -608,6 +687,21 @@ export function Terminal({
               ▌
             </span>
           </form>
+
+          {/* ── status footer — operator hints ────────────── */}
+          <div className="flex items-center justify-between gap-2 px-4 py-2 border-t border-white/8 font-mono text-[9px] tracking-[0.16em] text-wx-dim/70">
+            <span className="tabular-nums truncate">
+              {commandsDiscovered.length} CMDS · {lines.length} LINES
+              {oracleBusy && (
+                <span className="text-wx-violet/80"> · ORACLE THINKING</span>
+              )}
+            </span>
+            <span className="hidden sm:flex items-center gap-2 shrink-0">
+              <span className="wx-key">↑ HISTORY</span>
+              <span className="wx-key">` TOGGLE</span>
+              <span className="wx-key">ESC CLOSE</span>
+            </span>
+          </div>
         </motion.div>
       )}
     </AnimatePresence>

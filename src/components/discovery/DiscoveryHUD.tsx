@@ -115,7 +115,7 @@ export function DiscoveryHUD() {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -8 }}
           transition={{ duration: 0.3, ease: EASE_EXPO }}
-          className="fixed right-3 sm:right-4 top-[60px] sm:top-[64px] w-72 max-w-[calc(100vw-1.5rem)] glass-deep border border-white/10 p-4 clip-panel z-50 space-y-4 outline-none"
+          className="fixed right-3 sm:right-4 top-[60px] sm:top-[64px] w-72 max-w-[calc(100vw-1.5rem)] glass-deep border border-white/10 p-4 clip-panel wx-aura z-50 space-y-4 outline-none"
           role="dialog"
           aria-label="World discovery log"
           tabIndex={-1}
