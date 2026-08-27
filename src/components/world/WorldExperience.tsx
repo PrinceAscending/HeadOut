@@ -17,6 +17,7 @@ import { CommandPalette } from "@/components/palette/CommandPalette";
 import { DiscoveryHUD, WorldToasts } from "@/components/discovery/DiscoveryHUD";
 import { SecretRooms } from "@/components/secrets/SecretRooms";
 import { useWorld, derivePresenceLine, deriveRegionActivity, STATUS_COLOR } from "@/lib/world/store";
+import { travelTo } from "@/lib/world/travel";
 import { activitySignal } from "@/lib/world/activity-signal";
 import { connectLanyard } from "@/lib/integrations/lanyard";
 import { useGame } from "@/lib/game/store";
@@ -82,7 +83,7 @@ export function WorldExperience() {
   const lanyardRef = useRef<{ close: () => void } | null>(null);
 
   const setActivePanel = useWorld((s) => s.setActivePanel);
-  const setTerminalOpen = useWorld((s) => s.setTerminalOpen);
+  const terminalOpen = useWorld((s) => s.terminalOpen);
   const lanyard = useWorld((s) => s.lanyard);
   const health = useWorld((s) => s.health);
   const activePanel = useWorld((s) => s.activePanel);
@@ -281,7 +282,9 @@ export function WorldExperience() {
   };
 
   const gotoRegion = (id: string) => {
-    setActivePanel(id);
+    /* programmatic travel (terminal `goto`, atlas fallback) — never
+       toggles a surface closed behind the caller's back */
+    travelTo(id, { toggle: false });
   };
 
   const presenceLine = derivePresenceLine(lanyard);
@@ -311,7 +314,7 @@ export function WorldExperience() {
                     g.revealUnknown();
                     setActivePanel("unknown");
                   } else {
-                    setActivePanel(id);
+                    travelTo(id);
                   }
                 }}
               />
@@ -416,7 +419,7 @@ export function WorldExperience() {
                     {status.toUpperCase()}
                   </span>
                 </span>
-                <span className="block font-mono text-[9.5px] sm:text-[10px] text-wx-dim tracking-[0.14em] truncate mt-0.5 max-w-[46vw] sm:max-w-[220px]">
+                <span className="block font-mono text-[9.5px] sm:text-[10px] text-wx-dim tracking-[0.14em] truncate mt-0.5 max-w-[58vw] sm:max-w-[220px]">
                   {presenceLine}
                 </span>
               </span>
@@ -437,26 +440,39 @@ export function WorldExperience() {
                 layoutScroll
                 className="glass clip-btn px-1.5 py-1.5 sm:px-2 sm:py-2 flex items-center gap-0.5 sm:gap-1 overflow-x-auto no-scrollbar"
               >
-              {REGIONS.filter((r) => !r.hidden).map((r) => (
+              {REGIONS.filter((r) => !r.hidden).map((r) => {
+                const isCurrent =
+                  activePanel === r.id || (r.id === "terminal" && terminalOpen);
+                return (
                 <motion.button
                   key={r.id}
                   onClick={() => {
-                    if (useWorld.getState().activePanel === r.id) playSound("click");
-                    setActivePanel(r.id);
+                    if (isCurrent) playSound("click");
+                    travelTo(r.id);
                   }}
                   whileTap={{ scale: 0.9 }}
                   transition={SPRING_HUD}
                   className="group relative w-11 h-11 grid place-items-center shrink-0"
                   title={r.name}
                   aria-label={`Travel to ${r.name}`}
+                  aria-pressed={r.id === "terminal" ? terminalOpen : undefined}
                 >
+                  {/* hover aura — region-colored, compositor-only */}
                   <span
-                    className="font-mono text-[11px] tracking-wider transition-all group-hover:scale-110"
-                    style={{ color: activePanel === r.id ? "#fff" : r.color }}
+                    aria-hidden
+                    className="absolute inset-1 clip-btn opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity duration-200"
+                    style={{
+                      background: `radial-gradient(circle at 50% 55%, ${r.color}26, transparent 70%)`,
+                      boxShadow: `inset 0 0 14px ${r.color}1f`,
+                    }}
+                  />
+                  <span
+                    className="relative font-mono text-[11px] tracking-wider transition-all duration-200 group-hover:scale-110 group-hover:text-white"
+                    style={{ color: isCurrent ? "#fff" : r.color, textShadow: isCurrent ? `0 0 12px ${r.color}aa` : undefined }}
                   >
                     {r.code}
                   </span>
-                  {activePanel === r.id && (
+                  {isCurrent && (
                     <motion.span
                       layoutId="dock-underline"
                       transition={SPRING_HUD}
@@ -468,7 +484,8 @@ export function WorldExperience() {
                     />
                   )}
                 </motion.button>
-              ))}
+                );
+              })}
               <span className="w-px h-6 bg-white/10 mx-0.5 sm:mx-1 shrink-0" />
               <button
                 onClick={() => {
@@ -476,9 +493,10 @@ export function WorldExperience() {
                   w.setTerminalOpen(!w.terminalOpen);
                   playSound("open");
                 }}
-                className="w-11 h-11 grid place-items-center shrink-0 font-mono text-[14px] text-wx-dim hover:text-wx-cyan transition-colors"
+                className={`w-11 h-11 grid place-items-center shrink-0 font-mono text-[14px] transition-colors ${terminalOpen ? "text-wx-cyan" : "text-wx-dim hover:text-wx-cyan"}`}
                 title="Terminal (`)"
                 aria-label="Toggle terminal"
+                aria-pressed={terminalOpen}
               >
                 &gt;_
               </button>

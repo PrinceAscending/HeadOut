@@ -25,6 +25,8 @@ interface WorldStore {
   /* interactions */
   paletteOpen: boolean;
   terminalOpen: boolean;
+  /* when the terminal deck was last opened — drives the session clock */
+  terminalOpenedAt: number;
   activePanel: string | null;
   faultActive: boolean;
   /* hovered map node — lives here (not component state) so hover
@@ -57,6 +59,7 @@ export const useWorld = create<WorldStore>((set) => ({
   },
   paletteOpen: false,
   terminalOpen: false,
+  terminalOpenedAt: 0,
   activePanel: null,
   faultActive: false,
   hoveredRegion: null,
@@ -103,7 +106,12 @@ export const useWorld = create<WorldStore>((set) => ({
       health: { ...s.health, [key]: { ...s.health[key], ...h } },
     })),
   setPaletteOpen: (v) => set({ paletteOpen: v }),
-  setTerminalOpen: (v) => set({ terminalOpen: v }),
+  setTerminalOpen: (v) =>
+    set(
+      v
+        ? { terminalOpen: true, terminalOpenedAt: Date.now() }
+        : { terminalOpen: false }
+    ),
   setActivePanel: (v) => set({ activePanel: v }),
   setFaultActive: (v) => set({ faultActive: v }),
   setHoveredRegion: (v) => set({ hoveredRegion: v }),
