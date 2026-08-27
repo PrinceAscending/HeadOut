@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Command } from "cmdk";
 import { useWorld } from "@/lib/world/store";
+import { travelTo } from "@/lib/world/travel";
 import { useGame } from "@/lib/game/store";
 import { REGIONS } from "@/lib/config/regions";
 import { playSound } from "@/lib/audio/sound";
@@ -58,10 +59,15 @@ export function CommandPalette() {
           >
             <Command
               loop
-              className="glass-deep border border-white/12 clip-panel overflow-hidden"
+              className="glass-deep border border-white/12 clip-panel overflow-hidden wx-brackets wx-aura"
               label="World command"
             >
-              <div className="flex items-center gap-3 px-4 py-3.5 border-b border-white/8">
+              <div className="wx-topbeam flex items-center gap-3 px-4 py-3 border-b border-white/8">
+                <span
+                  className="w-1.5 h-1.5 bg-wx-cyan wx-animate-pulse shrink-0"
+                  style={{ boxShadow: "0 0 8px var(--wx-cyan)" }}
+                  aria-hidden
+                />
                 <span className="font-mono text-[10px] tracking-[0.3em] text-wx-cyan">
                   WORLD COMMAND
                 </span>
@@ -69,6 +75,11 @@ export function CommandPalette() {
                   ESC TO CLOSE
                 </span>
               </div>
+              <Command.Input
+                autoFocus
+                placeholder="type a region… fast travel"
+                className="w-full bg-transparent outline-none border-none font-mono text-[12px] text-white placeholder:text-wx-dim/60 px-4 py-3.5 border-b border-white/8"
+              />
               <Command.List className="max-h-[52vh] sm:max-h-80 overflow-y-auto wx-scroll p-2">
                 <Command.Empty className="px-3 py-8 text-center font-mono text-[10px] text-wx-dim tracking-[0.25em]">
                   NO MATCHING REGION
@@ -82,7 +93,7 @@ export function CommandPalette() {
                     <Command.Item
                       key={r.id}
                       value={`${r.name} ${r.id}`}
-                      onSelect={() => go(() => useWorld.getState().setActivePanel(r.id))}
+                      onSelect={() => go(() => travelTo(r.id, { toggle: false }))}
                       className="flex items-center gap-3 px-3 py-3 font-mono text-[11.5px] tracking-[0.14em] cursor-pointer data-[selected=true]:bg-white/8 data-[selected=true]:text-white text-foreground/75"
                     >
                       <span style={{ color: r.color }}>{r.code}</span>
@@ -91,6 +102,13 @@ export function CommandPalette() {
                   ))}
                 </Command.Group>
               </Command.List>
+              <div className="flex items-center justify-between px-4 py-2 border-t border-white/8 font-mono text-[9px] tracking-[0.16em] text-wx-dim/70">
+                <span>{REGIONS.filter((r) => !r.secret || unknownRevealed).length} REGIONS INDEXED</span>
+                <span className="hidden sm:flex items-center gap-2">
+                  <span className="wx-key">↑↓ NAVIGATE</span>
+                  <span className="wx-key">↵ TRAVEL</span>
+                </span>
+              </div>
             </Command>
           </motion.div>
         </motion.div>

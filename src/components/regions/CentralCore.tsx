@@ -243,7 +243,6 @@ export function CentralCore() {
 
         {avatarUrl && (
           <motion.div variants={fadeUp} className="flex justify-center">
-            { }
             <img
               src={avatarUrl}
               alt="Discord avatar"
